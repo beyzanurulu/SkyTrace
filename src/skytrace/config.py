@@ -121,9 +121,16 @@ class DetectorsConfig:
 
 
 @dataclass(frozen=True)
+class ReportConfig:
+    evidence_padding_s: float
+    max_points_per_trace: int
+
+
+@dataclass(frozen=True)
 class SkyTraceConfig:
     parser: ParserConfig
     detectors: DetectorsConfig
+    report: ReportConfig
 
 
 T = TypeVar("T")

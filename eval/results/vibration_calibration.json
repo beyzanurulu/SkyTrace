@@ -1,0 +1,360 @@
+{
+  "date": "2026-10-19",
+  "source": "px4_imu_status",
+  "statistic": "P95 of accel_vib_metric over armed samples",
+  "split": "by vehicle_uuid, stratified, sha256(salt) order, 50/50",
+  "thresholds": {
+    "warn": 0.04106941409409046,
+    "critical": 6.690288543701172,
+    "warn_rule": "P95 of 3 negative calibration logs",
+    "critical_rule": "P50 of 14 positive calibration logs",
+    "n_negative": 3,
+    "n_positive": 14
+  },
+  "metrics": {
+    "calibration": {
+      "tp": 13,
+      "fp": 1,
+      "fn": 1,
+      "tn": 2,
+      "precision": 0.9285714285714286,
+      "recall": 0.9285714285714286,
+      "false_positive_rate": 0.3333333333333333
+    },
+    "test": {
+      "tp": 14,
+      "fp": 3,
+      "fn": 0,
+      "tn": 0,
+      "precision": 0.8235294117647058,
+      "recall": 1.0,
+      "false_positive_rate": 1.0
+    }
+  },
+  "logs": [
+    {
+      "log_id": "e4728d43-d601-421b-b99d-ca36b772459a",
+      "vehicle": "000100000000323737373238510400310046",
+      "hardware": "PX4_FMU_V3",
+      "label": "clean",
+      "split": "calibration",
+      "statistic": 0.023813579231500626,
+      "predicted_vibration": false
+    },
+    {
+      "log_id": "999a88df-6ea4-4d06-9625-98e24dddf96d",
+      "vehicle": "000100000000323737373238510400310046",
+      "hardware": "PX4_FMU_V3",
+      "label": "clean",
+      "split": "calibration",
+      "statistic": 0.025881167501211166,
+      "predicted_vibration": false
+    },
+    {
+      "log_id": "ba4ed394-eb7e-43e4-a0c2-1d7ae9918b35",
+      "vehicle": "00060000000032373835333251160042002b",
+      "hardware": "SIYI_N7",
+      "label": "clean",
+      "split": "calibration",
+      "statistic": 0.04275699704885483,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "236a76d4-17b4-4714-a497-5cf3596b4706",
+      "vehicle": "0002000000003233353732335103002a0023",
+      "hardware": "PX4_FMU_V5",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 0.02080673724412918,
+      "predicted_vibration": false
+    },
+    {
+      "log_id": "41379ca5-f813-4039-9ada-3a3ec66bc15e",
+      "vehicle": "000600000000393037363333510f003c0025",
+      "hardware": "HKUST_NXT_DUAL",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 0.48993000388145447,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "6e33cf73-8039-47e1-8ba9-bc846453bd18",
+      "vehicle": "000600000000393439333033510400460034",
+      "hardware": "CUAV_7_NANO",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 1.1915751695632935,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "9e7bc6df-08b2-4d83-b53e-a102f67f33a9",
+      "vehicle": "000600000000383033343430510900440048",
+      "hardware": "PX4_FMU_V6C",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 1.7657023668289185,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "7d17873d-0333-445c-abb9-0e70c9d530cd",
+      "vehicle": "0006000000003432373135335116003a0048",
+      "hardware": "HKUST_NXT_DUAL",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 2.6084537506103516,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "24462c02-9a9e-454a-84b6-73d071a8c2a2",
+      "vehicle": "000600000000343739383031510a002e001f",
+      "hardware": "HOLYBRO_KAKUTEH7_WING",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 5.414697170257568,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "1960f7a6-8ec8-42e8-bea1-8deda612670a",
+      "vehicle": "0002000000003632363530335108002d001c",
+      "hardware": "PX4_FMU_V5",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 6.385749816894531,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "ff7e3458-4a2a-4209-861e-8e2ef6c56d0c",
+      "vehicle": "00060000000034383232353351130025003c",
+      "hardware": "MICOAIR_H743_V2",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 6.9948272705078125,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "396803a1-ae29-4482-8db6-e734760c861c",
+      "vehicle": "000600000000373335373433510d002a0026",
+      "hardware": "MORAKOT_V6",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 7.577239990234375,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "70e060db-6b5c-4882-ae57-256c2ebe6195",
+      "vehicle": "000600000000313736383433510400380016",
+      "hardware": "MICOAIR_H743_V2",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 10.225858688354492,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "43e79287-15ae-4a09-b0df-927646564741",
+      "vehicle": "000600000000353438323233510d002f0018",
+      "hardware": "PX4_FMU_V6C",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 10.341649055480957,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "e1fee8c7-f3f4-43cf-aa1a-773206fdffa2",
+      "vehicle": "000600000000323339343434510c0026003d",
+      "hardware": "MICOAIR_H743",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 17.599727630615234,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "37af509d-b89a-488b-8a86-7f19092d83db",
+      "vehicle": "00060000000038303334343051060052002c",
+      "hardware": "PX4_FMU_V6C",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 20.0090274810791,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "25cf977e-ee05-4aa2-b740-817d94a033c0",
+      "vehicle": "000600000000393337383333510e0032003b",
+      "hardware": "CUBEPILOT_CUBEORANGEPLUS",
+      "label": "vibration",
+      "split": "calibration",
+      "statistic": 26.266353607177734,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "630e1da2-b755-465b-8d34-3545e40939bd",
+      "vehicle": "00060000000036383236333251050022002b",
+      "hardware": "PX4_FMU_V6X",
+      "label": "clean",
+      "split": "test",
+      "statistic": 0.29010507464408875,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "d57b4c0c-174d-49bd-b46b-7040dcf540ca",
+      "vehicle": "00060000000036383236333251050022002b",
+      "hardware": "PX4_FMU_V6X",
+      "label": "clean",
+      "split": "test",
+      "statistic": 0.3599497973918915,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "2eb639d6-3086-4425-a241-003bcf67be91",
+      "vehicle": "0001000000003132343035335109003b001a",
+      "hardware": "PX4_FMU_V3",
+      "label": "clean",
+      "split": "test",
+      "statistic": 3.078845500946045,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "7be66c6d-de3e-42f9-ae75-10000d90969c",
+      "vehicle": "000200000000373735373233510f00250019",
+      "hardware": "PX4_FMU_V5",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 0.04028303176164627,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "7d4f5767-835b-4897-a89a-e5dd3489e7eb",
+      "vehicle": "000600000000393438313230510c00170035",
+      "hardware": "CUBEPILOT_CUBEORANGE",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 0.08422713726758957,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "89cedb06-6b69-4afc-983b-854cc6a9335f",
+      "vehicle": "000100000000333639333138510d0048003e",
+      "hardware": "PX4_FMU_V3",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 0.5541810393333435,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "11f15743-57eb-4faa-9053-3d7e8d2f5836",
+      "vehicle": "0006000000003636333834335111003b0023",
+      "hardware": "PX4_FMU_V6X",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 1.4807871580123901,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "a993ec79-38a4-44f5-8a52-4663ea75e354",
+      "vehicle": "000600000000323632353333510c0030003c",
+      "hardware": "MICOAIR_H743_V2",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 2.9772653579711914,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "8d51bf1d-d461-415b-8ea2-6609d42c789f",
+      "vehicle": "00020000000035333837313851180032001f",
+      "hardware": "PX4_FMU_V5",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 4.063602447509766,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "ff7beed9-a5d4-415d-b123-5b06315f5c8b",
+      "vehicle": "000600000000363435363333511800400047",
+      "hardware": "HKUST_NXT_DUAL",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 4.986112117767334,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "f1c82a01-2e59-4036-bd00-cae5056e96d1",
+      "vehicle": "000600000000343237313533510300260032",
+      "hardware": "PX4_FMU_V6C",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 5.309267520904541,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "9163bb38-362e-490b-9642-d97ad5711253",
+      "vehicle": "000600000000313437393034511600440046",
+      "hardware": "PX4_FMU_V6C",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 8.774041175842285,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "26816fe7-a724-4457-8bc0-939781b6d06b",
+      "vehicle": "0006000000003037363035325111004e0039",
+      "hardware": "CUAV_7_NANO",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 11.911076545715332,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "e35048da-3864-44a9-b9f1-9f4520d8ca94",
+      "vehicle": "000600000000353236313333510800240048",
+      "hardware": "KOADRONE_KOAFC",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 13.514742851257324,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "ffebcc39-f84a-473d-8df8-9be156713cdf",
+      "vehicle": "00060000000033383936303351010044001c",
+      "hardware": "PX4_FMU_V6X",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 32.555259704589844,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "5fd20a53-bbb3-4a37-928e-a61b9fad3b38",
+      "vehicle": "0006000000003933373833335111002c001f",
+      "hardware": "CUBEPILOT_CUBEORANGEPLUS",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 52.2702751159668,
+      "predicted_vibration": true
+    },
+    {
+      "log_id": "11ee8e71-20d6-4ef3-bd34-aa960f2210b9",
+      "vehicle": "000600000000303935343034510100360021",
+      "hardware": "HOLYBRO_KAKUTEH7",
+      "label": "vibration",
+      "split": "test",
+      "statistic": 53.37343215942383,
+      "predicted_vibration": true
+    }
+  ],
+  "skipped": [
+    {
+      "log_id": "63356431-1d69-4c9c-ac1b-68348c5ef5ae",
+      "reason": "no px4_imu_status vibration metric"
+    },
+    {
+      "log_id": "87c71fe7-1528-41c1-b1d7-a5da63613ff0",
+      "reason": "no px4_imu_status vibration metric"
+    },
+    {
+      "log_id": "a806c7f8-8530-47ed-8485-f8ca595d775d",
+      "reason": "no px4_imu_status vibration metric"
+    },
+    {
+      "log_id": "b5830d48-3260-4b94-ada0-e9375fe0e4dd",
+      "reason": "simulation (PX4_SITL)"
+    }
+  ]
+}

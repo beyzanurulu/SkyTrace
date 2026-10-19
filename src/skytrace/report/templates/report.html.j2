@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+  --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
+  --sev-critical: #d03b3b; --sev-warn: #fab219; --sev-info: #898781;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+  --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--text-primary);
+  font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 32px 0 12px; }
+h3 { font-size: 14px; margin: 0; }
+.sub { color: var(--text-secondary); margin: 0 0 20px; }
+.card {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin-bottom: 16px;
+}
+.summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px 24px; margin: 0; }
+.summary dt { color: var(--text-muted); font-size: 12px; }
+.summary dd { margin: 0; overflow-wrap: anywhere; }
+.counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.sev { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-weight: 600; }
+.sev svg { width: 14px; height: 14px; flex: none; }
+.chip { border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; background: var(--surface-1); }
+.sev-critical svg { color: var(--sev-critical); }
+.sev-warn svg { color: var(--sev-warn); }
+.sev-info svg { color: var(--sev-info); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.row-critical td:first-child { box-shadow: inset 3px 0 0 var(--sev-critical); }
+tr.row-warn td:first-child { box-shadow: inset 3px 0 0 var(--sev-warn); }
+a { color: var(--series-1); }
+.muted { color: var(--text-muted); }
+ul.plain { margin: 0; padding-left: 18px; }
+.evidence-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; margin-bottom: 4px; }
+.evidence-meta { color: var(--text-secondary); margin: 0 0 8px; font-variant-numeric: tabular-nums; }
+.plot { width: 100%; min-height: 120px; }
+details summary { cursor: pointer; color: var(--text-secondary); }
+footer { color: var(--text-muted); font-size: 12px; margin-top: 40px; }
+</style>
+</head>
+<body>
+{% macro sev_badge(severity) -%}
+<span class="sev sev-{{ severity }}">
+  {%- if severity == "critical" -%}
+  <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M5 1h6l4 4v6l-4 4H5l-4-4V5z"/><path d="M5.5 5.5l5 5m0-5l-5 5" stroke="#fff" stroke-width="1.6"/></svg>
+  {%- elif severity == "warn" -%}
+  <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1l7.5 13.5H.5z"/><path d="M8 6v4m0 2v1" stroke="#0b0b0b" stroke-width="1.6"/></svg>
+  {%- else -%}
+  <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 7v5m0-8v1" stroke="#fff" stroke-width="1.6"/></svg>
+  {%- endif -%}
+  {{ severity_labels[severity] }}</span>
+{%- endmacro %}
+<main>
+  <h1>Flight log analysis</h1>
+  <p class="sub">{{ summary[0][1] }} &middot; generated {{ generated }} by SkyTrace {{ version }}</p>
+
+  <section class="card" aria-labelledby="h-summary">
+    <h2 id="h-summary" style="margin-top:0">Flight summary</h2>
+    <dl class="summary">
+      {% for label, value in summary %}
+      <div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>
+      {% endfor %}
+    </dl>
+    <div class="counts">
+      <span class="chip">{{ sev_badge("critical") }} {{ counts.critical }}</span>
+      <span class="chip">{{ sev_badge("warn") }} {{ counts.warn }}</span>
+      {% if counts.info %}<span class="chip">{{ sev_badge("info") }} {{ counts.info }}</span>{% endif %}
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-timeline">
+    <h2 id="h-timeline" style="margin-top:0">Timeline</h2>
+    <p class="muted" style="margin:0 0 4px">Flight modes, armed time and findings. Click a finding to jump to its evidence.</p>
+    <div id="{{ timeline.div_id }}" class="plot js-plot" data-figure="timeline"></div>
+  </section>
+
+  <h2 id="findings">Findings ({{ findings|length }})</h2>
+  {% if findings %}
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Severity</th><th>Time (s)</th><th>Detector</th><th>Summary</th><th>Value / threshold</th></tr></thead>
+      <tbody>
+      {% for f in findings %}
+        <tr class="row-{{ f.severity }}">
+          <td><a href="#{{ f.evidence_plot }}">{{ f.id }}</a></td>
+          <td>{{ sev_badge(f.severity) }}</td>
+          <td class="num">{{ "%.1f"|format(f.t_start) }} &ndash; {{ "%.1f"|format(f.t_end) }}</td>
+          <td>{{ f.detector }}</td>
+          <td>{{ f.summary }}</td>
+          <td class="num">{{ f.metric }}: {{ "%.4g"|format(f.value) }} / {{ "%.4g"|format(f.threshold) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card">No findings. See the skipped checks below: a missing check is not the same as a clean flight.</div>
+  {% endif %}
+
+  {% if notes or warnings %}
+  <h2>Skipped checks and parser warnings</h2>
+  <div class="card">
+    {% if notes %}<h3>Skipped checks</h3><ul class="plain">{% for n in notes %}<li>{{ n }}</li>{% endfor %}</ul>{% endif %}
+    {% if warnings %}<h3 style="margin-top:12px">Parser warnings</h3><ul class="plain">{% for w in warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if blocks %}
+  <h2>Evidence</h2>
+  {% for b in blocks %}
+  <section class="card" id="{{ b.finding.evidence_plot }}">
+    <div class="evidence-head">
+      <h3>{{ b.finding.id }} &middot; {{ b.title }}</h3>
+      {{ sev_badge(b.finding.severity) }}
+    </div>
+    <p class="evidence-meta">{{ b.finding.summary }}</p>
+    {% if b.plot %}
+    <div id="{{ b.plot.div_id }}" class="plot js-plot"></div>
+    {% else %}
+    <p class="muted">No evidence plot for metric {{ b.finding.metric }}.</p>
+    {% endif %}
+  </section>
+  {% endfor %}
+  {% endif %}
+
+  <h2>Events</h2>
+  <div class="card">
+    <details>
+      <summary>{{ events|length }} events (modes, arming, failsafes, log messages)</summary>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Time (s)</th><th>Kind</th><th>Message</th></tr></thead>
+          <tbody>
+          {% for e in events %}
+            <tr><td class="num">{{ "%.2f"|format(e.t) }}</td><td>{{ e.kind }}</td><td>{{ e.message }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <footer>
+    Every number in this report comes from the log and the configuration; thresholds and their sources are documented in docs/thresholds.md.
+  </footer>
+</main>
+
+<script>{{ plotly_js|safe }}</script>
+<script>
+(function () {
+  var figures = {
+    {{ timeline.div_id|tojson }}: {{ timeline.figure_json|safe }}
+    {% for b in blocks if b.plot %}, {{ b.plot.div_id|tojson }}: {{ b.plot.figure_json|safe }}{% endfor %}
+  };
+  var config = { responsive: true, displaylogo: false, modeBarButtonsToRemove: ["select2d", "lasso2d"] };
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function applyTheme(div) {
+    var ink = cssVar("--text-primary"), ink2 = cssVar("--text-secondary"), muted = cssVar("--text-muted");
+    var grid = cssVar("--grid"), axis = cssVar("--axis"), surface = cssVar("--surface-1");
+    var upd = {
+      "font.color": ink2,
+      "xaxis.gridcolor": grid, "yaxis.gridcolor": grid,
+      "xaxis.linecolor": axis, "yaxis.linecolor": axis,
+      "xaxis.zerolinecolor": axis, "yaxis.zerolinecolor": axis,
+      "hoverlabel.bgcolor": surface, "hoverlabel.font.color": ink, "hoverlabel.bordercolor": axis
+    };
+    (div.layout.shapes || []).forEach(function (s, i) {
+      if (s.name === "threshold") upd["shapes[" + i + "].line.color"] = ink;
+    });
+    (div.layout.annotations || []).forEach(function (a, i) {
+      if (a.name === "threshold") upd["annotations[" + i + "].font.color"] = ink;
+    });
+    Plotly.relayout(div, upd);
+    div.data.forEach(function (tr, i) {
+      var role = tr.meta && tr.meta.role;
+      if (role === "series") {
+        Plotly.restyle(div, { "line.color": cssVar("--series-1") }, [i]);
+      } else if (role === "modes") {
+        var colors = tr.meta.slots.map(function (k) { return k < 0 ? muted : cssVar("--series-" + (k + 1)); });
+        Plotly.restyle(div, { "marker.color": [colors], "marker.line.color": surface, "textfont.color": ink }, [i]);
+      } else if (role === "armed" || role === "findings") {
+        Plotly.restyle(div, { "marker.line.color": surface }, [i]);
+      }
+    });
+  }
+
+  Object.keys(figures).forEach(function (id) {
+    var div = document.getElementById(id);
+    if (!div) return;
+    var fig = figures[id];
+    Plotly.newPlot(div, fig.data, fig.layout, config).then(applyTheme);
+    if (div.dataset.figure === "timeline") {
+      div.on("plotly_click", function (ev) {
+        var p = ev.points && ev.points[0];
+        if (p && p.customdata) location.hash = "evidence-" + p.customdata[0];
+      });
+    }
+  });
+
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+  var rethemeAll = function () {
+    document.querySelectorAll(".js-plot").forEach(function (div) { if (div.data) applyTheme(div); });
+  };
+  if (mq.addEventListener) mq.addEventListener("change", rethemeAll);
+  new MutationObserver(rethemeAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
+</body>
+</html>

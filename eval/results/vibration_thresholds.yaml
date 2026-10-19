@@ -1,0 +1,8 @@
+# Calibrated 2026-10-19 with eval/calibrate_vibration.py (eval/results/vibration_calibration.json).
+# Statistic: P95 of accel_vib_metric over armed samples; split by vehicle_uuid, stratified, sha256(salt) order, 50/50.
+# metric_warn: P95 of 3 negative calibration logs.
+# metric_critical: P50 of 14 positive calibration logs.
+# Calibration logs (17): 1960f7a6, 236a76d4, 24462c02, 25cf977e, 37af509d, 396803a1, 41379ca5, 43e79287, 6e33cf73, 70e060db, 7d17873d, 999a88df, 9e7bc6df, ba4ed394, e1fee8c7, e4728d43, ff7e3458
+# Test half: precision 0.82, recall 1.00, FPR 1.00 (n=17).
+metric_warn: 0.041
+metric_critical: 6.690

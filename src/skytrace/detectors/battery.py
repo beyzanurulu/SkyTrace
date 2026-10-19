@@ -5,10 +5,31 @@ from __future__ import annotations
 import numpy as np
 
 from skytrace.config import DetectorsConfig
-from skytrace.detectors.base import Finding, Severity, active_mask, rolling_time, threshold_findings
+from skytrace.detectors.base import (
+    Finding,
+    FloatArray,
+    Severity,
+    active_mask,
+    rolling_time,
+    threshold_findings,
+)
 from skytrace.parsers.schema import FlightLog
 
 NAME = "battery"
+
+
+def resolve_cells(log: FlightLog, cfg: DetectorsConfig) -> int | None:
+    """Cell count: config override first, then the log; ``None`` if unknown."""
+    configured = cfg.battery.cells
+    return configured if configured is not None else log.metadata.battery_cells
+
+
+def sag_per_cell(log: FlightLog, cells: int, window_s: float) -> FloatArray:
+    """Drop below the rolling max over ``window_s``, per cell (V)."""
+    voltage = log.battery["voltage"]
+    peak = rolling_time(voltage, log.battery["t"], window_s, "max")
+    sag: FloatArray = (peak - voltage.to_numpy(dtype=np.float64)) / cells
+    return sag
 
 
 def detect(log: FlightLog, cfg: DetectorsConfig, notes: list[str]) -> list[Finding]:
@@ -21,7 +42,7 @@ def detect(log: FlightLog, cfg: DetectorsConfig, notes: list[str]) -> list[Findi
     active = active_mask(log, bat, cfg.only_when_armed)
     findings: list[Finding] = []
 
-    cells = c.cells if c.cells is not None else log.metadata.battery_cells
+    cells = resolve_cells(log, cfg)
     if cells is None:
         notes.append(
             "battery: cell count unknown (set detectors.battery.cells), "
@@ -31,8 +52,7 @@ def detect(log: FlightLog, cfg: DetectorsConfig, notes: list[str]) -> list[Findi
         voltage = bat["voltage"]
         per_cell = voltage.to_numpy(dtype=np.float64) / cells
         # Drop below the recent maximum: fast sag under load, not slow discharge.
-        peak = rolling_time(voltage, bat["t"], c.sag_window_s, "max")
-        sag = (peak - voltage.to_numpy(dtype=np.float64)) / cells
+        sag = sag_per_cell(log, cells, c.sag_window_s)
 
         def low_text(sev: Severity, v: float, thr: float, t0: float, t1: float) -> str:
             return (

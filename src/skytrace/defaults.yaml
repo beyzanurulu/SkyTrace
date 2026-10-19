@@ -103,3 +103,10 @@ detectors:
     imbalance_warn: 0.15
     imbalance_critical: 0.25
     imbalance_min_duration_s: 5.0
+
+report:
+  # Evidence plots show the finding interval plus this much context (s) on each side.
+  evidence_padding_s: 10.0
+  # Long series are reduced to at most this many points per trace (min/max per
+  # bucket, so short peaks survive). Keeps 50 MB logs from producing huge reports.
+  max_points_per_trace: 4000

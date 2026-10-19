@@ -91,3 +91,10 @@ Vibration metric sources (`LogMetadata.vib_metric_source`):
 | `imbalance_window_s` | `5.0` | s | Rolling mean per motor. Imbalance = that mean minus the mean across all motors. |
 | `imbalance_warn` / `imbalance_critical` | `0.15` / `0.25` | 0–1 | Heuristic. |
 | `imbalance_min_duration_s` | `5.0` | s | Heuristic. The imbalance check is skipped when the motor count is unknown (`LogMetadata.motor_count_known = false`), because servo outputs would show up as imbalance. |
+
+## `report`
+
+| Key | Default | Unit | Meaning |
+|---|---|---|---|
+| `evidence_padding_s` | `10.0` | s | Context shown on each side of a finding's interval in its evidence plot. |
+| `max_points_per_trace` | `4000` | points | Long series are reduced to at most this many points per trace. Each bucket keeps its minimum and maximum, so short peaks stay visible. |

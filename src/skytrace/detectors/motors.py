@@ -40,6 +40,16 @@ def detect(log: FlightLog, cfg: DetectorsConfig, notes: list[str]) -> list[Findi
     return findings
 
 
+def imbalance_deviation(log: FlightLog, window_s: float) -> FloatArray:
+    """Per-motor rolling mean minus the mean over all motors; shape (samples, motors)."""
+    cols = [f"m{n}" for n in range(1, log.motor_count + 1)]
+    smooth = np.column_stack(
+        [rolling_time(log.motors[col], log.motors["t"], window_s, "mean") for col in cols]
+    )
+    deviation: FloatArray = smooth - np.nanmean(smooth, axis=1, keepdims=True)
+    return deviation
+
+
 def _saturation(
     log: FlightLog, cfg: DetectorsConfig, t: FloatArray, active: BoolArray
 ) -> list[Finding]:
@@ -78,13 +88,7 @@ def _imbalance(
 ) -> list[Finding]:
     c = cfg.motors
     cols = [f"m{n}" for n in range(1, log.motor_count + 1)]
-    smooth = np.column_stack(
-        [
-            rolling_time(log.motors[col], log.motors["t"], c.imbalance_window_s, "mean")
-            for col in cols
-        ]
-    )
-    deviation = smooth - np.nanmean(smooth, axis=1, keepdims=True)
+    deviation = imbalance_deviation(log, c.imbalance_window_s)
     findings: list[Finding] = []
     for k, col in enumerate(cols):
         signed = deviation[:, k]
