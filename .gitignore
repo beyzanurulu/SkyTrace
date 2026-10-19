@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Data: raw logs and eval data are never committed
+data/
+*.ulg
+*.bin
+!tests/fixtures/*.ulg
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

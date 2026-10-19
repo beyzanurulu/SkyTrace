@@ -1,0 +1,21 @@
+# SkyTrace default configuration.
+# Every value here is documented in docs/thresholds.md.
+# Override with a user YAML file; only the keys you set are replaced.
+
+parser:
+  # Max time gap (s) when aligning a slower topic (setpoints, clip counters)
+  # onto a faster time base. Farther samples become NaN instead of stale values.
+  merge_tolerance_s: 0.5
+
+  # Rolling window (s) for the per-axis accelerometer standard deviation
+  # used as vib_x / vib_y / vib_z on PX4 logs.
+  vibration_window_s: 0.5
+
+  motors:
+    # Read PWM_MAIN_MINn / PWM_MAIN_MAXn / PWM_MIN / PWM_MAX from the log first.
+    use_log_params: true
+    # Fallback PWM range (microseconds) when the log has no usable params.
+    pwm_min_us: 1000
+    pwm_max_us: 2000
+    # Number of motors. null = CA_ROTOR_COUNT from the log, else all outputs.
+    count: null
