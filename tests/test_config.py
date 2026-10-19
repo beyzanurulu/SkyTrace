@@ -45,8 +45,27 @@ def test_empty_file_is_defaults(tmp_path):
         "parser:\n  motors:\n    count: true\n",
         "parser:\n  motors:\n    use_log_params: 1\n",
         "parser:\n  motors:\n    pwm_min_us: 2000\n    pwm_max_us: 1000\n",
+        "detectors:\n  vibration:\n    accel_std_critical: 10\n",  # critical < warn
+        "detectors:\n  battery:\n    cell_voltage_critical: 3.8\n",  # below-check reversed
+        "detectors:\n  battery:\n    remaining_warn: 15\n",  # percent instead of fraction
+        "detectors:\n  motors:\n    saturation_level: 1.5\n",
+        "detectors:\n  gps:\n    min_satellites: 5.5\n",  # must be an integer
+        "detectors:\n  merge_gap_s: -0.1\n",
     ],
 )
 def test_invalid_config_rejected(tmp_path, text):
     with pytest.raises(ConfigError):
         load_config(_write(tmp_path, text))
+
+
+def test_zero_allowed_only_where_marked(tmp_path):
+    cfg = load_config(_write(tmp_path, "detectors:\n  merge_gap_s: 0\n"))
+    assert cfg.detectors.merge_gap_s == 0.0
+    with pytest.raises(ConfigError):
+        load_config(_write(tmp_path, "detectors:\n  attitude:\n    min_duration_s: 0\n"))
+
+
+def test_detector_overrides(tmp_path):
+    cfg = load_config(_write(tmp_path, "detectors:\n  battery:\n    cells: 6\n"))
+    assert cfg.detectors.battery.cells == 6
+    assert cfg.detectors.battery.cell_voltage_warn == 3.5

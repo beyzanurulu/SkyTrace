@@ -19,3 +19,69 @@ parser:
     pwm_max_us: 2000
     # Number of motors. null = CA_ROTOR_COUNT from the log, else all outputs.
     count: null
+
+detectors:
+  # Only look at samples while the vehicle is armed (from arm/disarm events).
+  # Logs without arm/disarm events are analyzed in full.
+  only_when_armed: true
+  # Violations separated by less than this gap (s) are merged into one finding.
+  merge_gap_s: 0.5
+
+  vibration:
+    # Per-axis accel std (m/s^2). Guidance from ArduPilot's VIBE metric:
+    # < 30 acceptable, > 30 may cause problems, > 60 almost always does.
+    accel_std_warn: 30.0
+    accel_std_critical: 60.0
+    min_duration_s: 1.0
+    # Any accelerometer clipping while armed is a warning; this many clip events
+    # within one finding make it critical (heuristic).
+    clip_critical_count: 100
+    # Clipping bursts closer than this (s) are reported as one finding.
+    clip_merge_gap_s: 5.0
+
+  gps:
+    # fix_type below this (3 = 3D fix) while armed is critical.
+    min_fix_type: 3
+    # PX4 EKF2_REQ_NSATS / EKF2_REQ_EPH defaults.
+    min_satellites: 6
+    max_eph_m: 3.0
+    # Adapted from PX4 EKF2_REQ_PDOP (2.5); HDOP <= PDOP.
+    max_hdop: 2.5
+    min_duration_s: 1.0
+
+  battery:
+    # Cell count. null = from the log (battery_status.cell_count / BAT1_N_CELLS);
+    # if still unknown, per-cell checks are skipped.
+    cells: null
+    # Per-cell voltage (V).
+    cell_voltage_warn: 3.5
+    cell_voltage_critical: 3.3
+    # Voltage drop below the rolling max over sag_window_s, per cell (V).
+    # 0.3 V matches PX4's BAT_V_LOAD_DROP default; 0.5 V is a heuristic.
+    sag_window_s: 2.0
+    sag_warn_v_per_cell: 0.3
+    sag_critical_v_per_cell: 0.5
+    # Sag is short by nature; 0 = a single sample is enough.
+    sag_min_duration_s: 0.0
+    # Remaining fraction. PX4 BAT_LOW_THR / BAT_CRIT_THR defaults.
+    remaining_warn: 0.15
+    remaining_critical: 0.07
+    min_duration_s: 1.0
+
+  attitude:
+    # |setpoint - actual| for roll and pitch (degrees). Heuristic.
+    error_warn_deg: 10.0
+    error_critical_deg: 20.0
+    min_duration_s: 1.0
+
+  motors:
+    # Normalized output at or above this level counts as saturated.
+    saturation_level: 0.95
+    # Saturated for at least this long (s) -> warn / critical. Heuristic.
+    saturation_warn_s: 0.5
+    saturation_critical_s: 2.0
+    # One motor's rolling mean deviating from the mean of all motors.
+    imbalance_window_s: 5.0
+    imbalance_warn: 0.15
+    imbalance_critical: 0.25
+    imbalance_min_duration_s: 5.0

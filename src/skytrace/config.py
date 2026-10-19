@@ -3,20 +3,29 @@
 All tunable values (thresholds, tolerances, fallbacks) live in ``defaults.yaml``
 and are documented in ``docs/thresholds.md``. A user YAML file overrides only
 the keys it sets.
+
+The YAML tree maps 1:1 onto the frozen dataclasses below. Numbers must be > 0
+unless the field is marked with ``_ZERO_OK``.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import dataclasses
+import types
+import typing
+from dataclasses import dataclass, field
 from importlib import resources
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import yaml
 
 
 class ConfigError(ValueError):
     """Raised when a configuration file is malformed."""
+
+
+_ZERO_OK: dict[str, Any] = {"zero_ok": True}
 
 
 @dataclass(frozen=True)
@@ -35,8 +44,73 @@ class ParserConfig:
 
 
 @dataclass(frozen=True)
+class VibrationDetectorConfig:
+    accel_std_warn: float
+    accel_std_critical: float
+    min_duration_s: float
+    clip_critical_count: int
+    clip_merge_gap_s: float
+
+
+@dataclass(frozen=True)
+class GpsDetectorConfig:
+    min_fix_type: int
+    min_satellites: int
+    max_eph_m: float
+    max_hdop: float
+    min_duration_s: float
+
+
+@dataclass(frozen=True)
+class BatteryDetectorConfig:
+    cells: int | None
+    cell_voltage_warn: float
+    cell_voltage_critical: float
+    sag_window_s: float
+    sag_warn_v_per_cell: float
+    sag_critical_v_per_cell: float
+    sag_min_duration_s: float = field(metadata=_ZERO_OK)
+    remaining_warn: float
+    remaining_critical: float
+    min_duration_s: float
+
+
+@dataclass(frozen=True)
+class AttitudeDetectorConfig:
+    error_warn_deg: float
+    error_critical_deg: float
+    min_duration_s: float
+
+
+@dataclass(frozen=True)
+class MotorDetectorConfig:
+    saturation_level: float
+    saturation_warn_s: float
+    saturation_critical_s: float
+    imbalance_window_s: float
+    imbalance_warn: float
+    imbalance_critical: float
+    imbalance_min_duration_s: float
+
+
+@dataclass(frozen=True)
+class DetectorsConfig:
+    only_when_armed: bool
+    merge_gap_s: float = field(metadata=_ZERO_OK)
+    vibration: VibrationDetectorConfig
+    gps: GpsDetectorConfig
+    battery: BatteryDetectorConfig
+    attitude: AttitudeDetectorConfig
+    motors: MotorDetectorConfig
+
+
+@dataclass(frozen=True)
 class SkyTraceConfig:
     parser: ParserConfig
+    detectors: DetectorsConfig
+
+
+T = TypeVar("T")
 
 
 def _read_defaults() -> dict[str, Any]:
@@ -63,40 +137,82 @@ def _merge(base: dict[str, Any], override: dict[str, Any], path: str = "") -> di
     return merged
 
 
-def _number(data: dict[str, Any], key: str, path: str, *, positive: bool = True) -> float:
-    value = data[key]
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        raise ConfigError(f"{path}.{key} must be a number, got {value!r}")
-    if positive and value <= 0:
-        raise ConfigError(f"{path}.{key} must be > 0, got {value!r}")
-    return float(value)
+def _convert(value: object, tp: object, path: str, zero_ok: bool) -> object:
+    """Validate ``value`` against the annotation ``tp`` and convert it."""
+    args = typing.get_args(tp)
+    if isinstance(tp, types.UnionType) and type(None) in args:
+        if value is None:
+            return None
+        (inner,) = (a for a in args if a is not type(None))
+        return _convert(value, inner, path, zero_ok)
+    if dataclasses.is_dataclass(tp):
+        if not isinstance(value, dict):
+            raise ConfigError(f"{path} must be a mapping")
+        return _build(tp, value, path)  # type: ignore[arg-type]
+    if tp is bool:
+        if not isinstance(value, bool):
+            raise ConfigError(f"{path} must be a boolean, got {value!r}")
+        return value
+    if tp in (int, float):
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            raise ConfigError(f"{path} must be a number, got {value!r}")
+        if tp is int and not isinstance(value, int):
+            raise ConfigError(f"{path} must be an integer, got {value!r}")
+        if value < 0 or (value == 0 and not zero_ok):
+            raise ConfigError(f"{path} must be {'>= 0' if zero_ok else '> 0'}, got {value!r}")
+        return tp(value)
+    raise TypeError(f"unsupported config annotation {tp!r} at {path}")
 
 
-def _build(data: dict[str, Any]) -> SkyTraceConfig:
-    p = data["parser"]
-    m = p["motors"]
+def _build(cls: type[T], data: dict[str, Any], path: str = "") -> T:
+    hints = typing.get_type_hints(cls)
+    kwargs: dict[str, Any] = {}
+    for f in dataclasses.fields(cls):  # type: ignore[arg-type]
+        full = f"{path}.{f.name}" if path else f.name
+        if f.name not in data:
+            raise ConfigError(f"missing config key: {full}")
+        kwargs[f.name] = _convert(
+            data[f.name], hints[f.name], full, f.metadata.get("zero_ok", False)
+        )
+    extra = set(data) - set(kwargs)
+    if extra:
+        raise ConfigError(f"unknown config keys under {path or '<root>'}: {sorted(extra)}")
+    return cls(**kwargs)
 
-    if not isinstance(m["use_log_params"], bool):
-        raise ConfigError("parser.motors.use_log_params must be a boolean")
-    count = m["count"]
-    if count is not None and (isinstance(count, bool) or not isinstance(count, int) or count < 1):
-        raise ConfigError(f"parser.motors.count must be null or a positive integer, got {count!r}")
 
-    motors = MotorConfig(
-        use_log_params=m["use_log_params"],
-        pwm_min_us=_number(m, "pwm_min_us", "parser.motors"),
-        pwm_max_us=_number(m, "pwm_max_us", "parser.motors"),
-        count=count,
-    )
-    if motors.pwm_max_us <= motors.pwm_min_us:
+def _check(cfg: SkyTraceConfig) -> None:
+    """Cross-field constraints that a per-field type check cannot express."""
+    m = cfg.parser.motors
+    if m.pwm_max_us <= m.pwm_min_us:
         raise ConfigError("parser.motors.pwm_max_us must be greater than pwm_min_us")
 
-    parser = ParserConfig(
-        merge_tolerance_s=_number(p, "merge_tolerance_s", "parser"),
-        vibration_window_s=_number(p, "vibration_window_s", "parser"),
-        motors=motors,
-    )
-    return SkyTraceConfig(parser=parser)
+    d = cfg.detectors
+    pairs = [
+        ("vibration.accel_std", d.vibration.accel_std_warn, d.vibration.accel_std_critical),
+        (
+            "battery.sag_*_v_per_cell",
+            d.battery.sag_warn_v_per_cell,
+            d.battery.sag_critical_v_per_cell,
+        ),
+        ("attitude.error_*_deg", d.attitude.error_warn_deg, d.attitude.error_critical_deg),
+        ("motors.saturation_*_s", d.motors.saturation_warn_s, d.motors.saturation_critical_s),
+        ("motors.imbalance", d.motors.imbalance_warn, d.motors.imbalance_critical),
+    ]
+    for name, warn, critical in pairs:
+        if critical < warn:
+            raise ConfigError(f"detectors.{name}: critical must be >= warn")
+    # "Below" thresholds: critical is the lower value.
+    low_pairs = [
+        ("battery.cell_voltage", d.battery.cell_voltage_warn, d.battery.cell_voltage_critical),
+        ("battery.remaining", d.battery.remaining_warn, d.battery.remaining_critical),
+    ]
+    for name, warn, critical in low_pairs:
+        if critical > warn:
+            raise ConfigError(f"detectors.{name}: critical must be <= warn")
+    if d.battery.remaining_warn > 1:
+        raise ConfigError("detectors.battery.remaining_warn must be a fraction in 0..1")
+    if not 0 < d.motors.saturation_level <= 1:
+        raise ConfigError("detectors.motors.saturation_level must be in (0, 1]")
 
 
 def load_config(path: str | Path | None = None) -> SkyTraceConfig:
@@ -107,4 +223,6 @@ def load_config(path: str | Path | None = None) -> SkyTraceConfig:
         if not isinstance(user, dict):
             raise ConfigError(f"{path}: top level must be a mapping")
         data = _merge(data, user)
-    return _build(data)
+    cfg = _build(SkyTraceConfig, data)
+    _check(cfg)
+    return cfg

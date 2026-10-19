@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal
 
+import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
@@ -41,6 +42,16 @@ TABLE_NAMES: Final[tuple[str, ...]] = (
 EVENT_KINDS: Final[frozenset[str]] = frozenset(
     {"mode", "arm", "disarm", "failsafe", "error", "warning", "info"}
 )
+
+
+def time_index(t: pd.Series) -> pd.TimedeltaIndex:
+    """``t`` (float seconds) as a nanosecond TimedeltaIndex for time-based rolling windows.
+
+    The resolution is pinned explicitly: pandas may otherwise infer second
+    resolution for whole-number times and silently round sub-second windows.
+    """
+    ns = np.round(t.to_numpy(dtype=np.float64) * 1e9).astype(np.int64)
+    return pd.TimedeltaIndex(ns.astype("timedelta64[ns]"))
 
 
 class SchemaError(ValueError):
@@ -95,6 +106,9 @@ class LogMetadata:
     firmware: str | None = None
     hardware: str | None = None
     vehicle_type: str | None = None
+    battery_cells: int | None = None
+    motor_count_known: bool = True
+    """False when the parser had to assume every output is a motor."""
 
 
 @dataclass

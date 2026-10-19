@@ -10,6 +10,7 @@ from skytrace.parsers.schema import (
     LogMetadata,
     SchemaError,
     empty_table,
+    time_index,
     validate_table,
 )
 
@@ -73,3 +74,12 @@ def test_from_file_dispatch(tmp_path):
         FlightLog.from_file(tmp_path / "flight.BIN")
     with pytest.raises(ValueError, match="unsupported"):
         FlightLog.from_file(tmp_path / "flight.csv")
+
+
+def test_time_index_keeps_subsecond_resolution():
+    # pandas would infer second resolution for whole-number times and round 1.5 s windows.
+    idx = time_index(pd.Series([0.0, 1.0, 2.0]))
+    assert str(idx.dtype) == "timedelta64[ns]"
+    s = pd.Series([1.0, 5.0, 2.0], index=idx)
+    assert s.rolling(pd.Timedelta(seconds=1.5), min_periods=1).max().tolist() == [1.0, 5.0, 5.0]
+    assert time_index(pd.Series([0.1234567]))[0] == pd.Timedelta(nanoseconds=123456700)

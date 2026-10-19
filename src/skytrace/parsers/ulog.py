@@ -20,7 +20,7 @@ import pandas as pd
 from pyulog import ULog
 
 from skytrace.config import MotorConfig, SkyTraceConfig, load_config
-from skytrace.parsers.schema import FlightLog, LogMetadata, empty_table
+from skytrace.parsers.schema import FlightLog, LogMetadata, empty_table, time_index
 
 TOPIC_CANDIDATES: Final[dict[str, tuple[str, ...]]] = {
     "attitude": ("vehicle_attitude",),
@@ -202,15 +202,38 @@ def _gps(topics: _Topics, warnings: list[str]) -> pd.DataFrame:
     )
 
 
+def _battery_frame(topics: _Topics) -> pd.DataFrame | None:
+    """The first battery_status instance reporting a connected battery, else instance 0."""
+    frames = [
+        f[1]
+        for mid in topics.instances("battery_status")
+        if (f := topics.get("battery", mid)) is not None
+    ]
+    if not frames:
+        return None
+    connected = [f for f in frames if "connected" in f and f["connected"].astype(bool).any()]
+    return connected[0] if connected else frames[0]
+
+
+def _battery_cells(topics: _Topics) -> int | None:
+    """Cell count from battery_status.cell_count, else the BAT1_N_CELLS / BAT_N_CELLS param."""
+    b = _battery_frame(topics)
+    if b is not None and "cell_count" in b:
+        counts = b["cell_count"][b["cell_count"] > 0]
+        if len(counts):
+            return int(counts.mode().iloc[0])
+    for key in ("BAT1_N_CELLS", "BAT_N_CELLS"):
+        v = topics.param(key)
+        if v is not None and v > 0:
+            return int(v)
+    return None
+
+
 def _battery(topics: _Topics, warnings: list[str]) -> pd.DataFrame:
-    instances = topics.instances("battery_status")
-    if not instances:
+    b = _battery_frame(topics)
+    if b is None:
         warnings.append("battery: no battery_status topic")
         return empty_table("battery")
-    # Prefer the first instance that reports a connected battery, else instance 0.
-    frames = [f[1] for mid in instances if (f := topics.get("battery", mid)) is not None]
-    connected = [f for f in frames if "connected" in f and f["connected"].astype(bool).any()]
-    b = connected[0] if connected else frames[0]
     remaining = _col(b, "remaining")
     remaining = remaining.where(remaining >= 0)  # PX4 uses -1 for "unknown"
     return pd.DataFrame(
@@ -239,6 +262,15 @@ def _motor_count(topics: _Topics, mcfg: MotorConfig, available: int) -> int:
     if rotors is not None and rotors > 0:
         return min(int(rotors), available)
     return available
+
+
+def _motor_count_known(topics: _Topics, mcfg: MotorConfig) -> bool:
+    """False when actuator_outputs is the source and nothing says how many are motors."""
+    found = topics.get("motors", 0)
+    if found is None or found[0] == "actuator_motors" or mcfg.count is not None:
+        return True
+    rotors = topics.param("CA_ROTOR_COUNT")
+    return rotors is not None and rotors > 0
 
 
 def _pwm_range(topics: _Topics, mcfg: MotorConfig, channel: int) -> tuple[float, float]:
@@ -280,7 +312,7 @@ def _motors(topics: _Topics, cfg: SkyTraceConfig, warnings: list[str]) -> pd.Dat
     if "noutputs" in m.columns and len(m):
         available = min(available, int(m["noutputs"].max()))
     n = _motor_count(topics, mcfg, available)
-    if mcfg.count is None and topics.param("CA_ROTOR_COUNT") is None:
+    if not _motor_count_known(topics, mcfg):
         warnings.append(
             f"motors: motor count unknown, using all {n} outputs (set parser.motors.count)"
         )
@@ -297,7 +329,7 @@ def _vibration(topics: _Topics, cfg: SkyTraceConfig, warnings: list[str]) -> pd.
         return empty_table("vibration")
     _, acc = found
     window = pd.Timedelta(seconds=cfg.parser.vibration_window_s)
-    idx = pd.to_timedelta(acc["t"], unit="s")
+    idx = time_index(acc["t"])
     out = pd.DataFrame({"t": acc["t"]})
     for axis, i in (("vib_x", 0), ("vib_y", 1), ("vib_z", 2)):
         series = pd.Series(_col(acc, f"accelerometer_m_s2[{i}]").to_numpy(), index=idx)
@@ -385,7 +417,7 @@ def _events(topics: _Topics, ulog: _ULogLike, warnings: list[str]) -> pd.DataFra
     return df.sort_values("t", kind="stable").reset_index(drop=True)
 
 
-def _metadata(path: Path, ulog: _ULogLike, topics: _Topics) -> LogMetadata:
+def _metadata(path: Path, ulog: _ULogLike, topics: _Topics, cfg: SkyTraceConfig) -> LogMetadata:
     info: dict[str, Any] = ulog.msg_info_dict
     vehicle_type: str | None = None
     status = topics.get("status")
@@ -405,6 +437,8 @@ def _metadata(path: Path, ulog: _ULogLike, topics: _Topics) -> LogMetadata:
         firmware=None if fw is None else str(fw),
         hardware=None if hw is None else str(hw),
         vehicle_type=vehicle_type,
+        battery_cells=_battery_cells(topics),
+        motor_count_known=_motor_count_known(topics, cfg.parser.motors),
     )
 
 
@@ -418,7 +452,7 @@ def parse_ulog(path: str | Path, config: SkyTraceConfig | None = None) -> Flight
     warnings: list[str] = []
 
     return FlightLog(
-        metadata=_metadata(p, ulog, topics),
+        metadata=_metadata(p, ulog, topics, cfg),
         attitude=_attitude(topics, cfg, warnings),
         gps=_gps(topics, warnings),
         battery=_battery(topics, warnings),

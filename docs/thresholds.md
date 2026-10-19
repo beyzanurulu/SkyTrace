@@ -38,4 +38,47 @@ Unknown keys are rejected so a typo does not silently fall back to the default.
 - `vibration.clip_count` is the cumulative sum of `vehicle_imu_status.accel_clipping[0..2]` for IMU instance 0.
 - Event kinds are `mode`, `arm`, `disarm`, `failsafe`, `error` (log level ≤ ERR), `warning` and `info`.
 
-Detector thresholds will be added to this file as detectors are implemented.
+## `detectors`
+
+How every detector works:
+
+- A finding opens when a value crosses the **warn** threshold for at least `min_duration_s`. Violations separated by at most `detectors.merge_gap_s` are merged first.
+- The finding is **critical** if any sample inside it also crosses the **critical** threshold.
+- `value` is the worst sample in the interval and `threshold` is the threshold that was crossed. The `summary` text is built only from these numbers.
+- With `only_when_armed: true`, only samples between arm and disarm events are checked. A log without any arm/disarm events is checked in full.
+- When a check cannot run (missing data, unknown cell count, unknown motor count), it is skipped and the reason is added to `DetectionResult.notes` instead of producing a finding.
+
+**Source** says where a default comes from. *Heuristic* means it is our own starting value, to be calibrated on the labeled evaluation set.
+
+| Key | Default | Unit | Source / meaning |
+|---|---|---|---|
+| `only_when_armed` | `true` | – | Ignore samples while disarmed. |
+| `merge_gap_s` | `0.5` | s | Merge violations closer than this gap. `0` is allowed. |
+| **vibration** | | | |
+| `accel_std_warn` / `accel_std_critical` | `30` / `60` | m/s² | ArduPilot vibration guidance for `VIBE` (below 30 is acceptable, above 60 almost always causes problems). On PX4 logs `vib_*` is the rolling std of the logged accelerometer, which only approximates `VIBE`. |
+| `min_duration_s` | `1.0` | s | Heuristic. |
+| `clip_critical_count` | `100` | events | Any clipping while armed is a warning. A burst of at least this many events is critical. Heuristic. |
+| `clip_merge_gap_s` | `5.0` | s | Clipping events closer than this gap are reported as one finding. |
+| **gps** | | | |
+| `min_fix_type` | `3` | – | A fix below 3D while armed is always critical. |
+| `min_satellites` | `6` | – | PX4 `EKF2_REQ_NSATS` default. |
+| `max_eph_m` | `3.0` | m | PX4 `EKF2_REQ_EPH` default. |
+| `max_hdop` | `2.5` | – | Adapted from PX4 `EKF2_REQ_PDOP` (2.5). HDOP ≤ PDOP, so this limit is slightly lenient. |
+| `min_duration_s` | `1.0` | s | Heuristic. |
+| **battery** | | | |
+| `cells` | `null` | – | Cell count. `null` means it is read from the log (`battery_status.cell_count`, then `BAT1_N_CELLS`/`BAT_N_CELLS`). If it is still unknown, the per-cell checks are skipped because a guessed count could produce false findings. |
+| `cell_voltage_warn` / `cell_voltage_critical` | `3.5` / `3.3` | V/cell | 3.5 V corresponds to PX4's `BAT_V_EMPTY` (3.5 V in the fixture log; check the default for your firmware). 3.3 V is a heuristic for LiPo. |
+| `sag_window_s` | `2.0` | s | Sag = rolling max over this window minus the current voltage. A fast drop counts as sag; slow discharge does not. |
+| `sag_warn_v_per_cell` / `sag_critical_v_per_cell` | `0.3` / `0.5` | V/cell | 0.3 V is PX4's `BAT_V_LOAD_DROP` default. 0.5 V is a heuristic. |
+| `sag_min_duration_s` | `0.0` | s | Sag is short by nature, so a single sample is enough. |
+| `remaining_warn` / `remaining_critical` | `0.15` / `0.07` | fraction | PX4 `BAT_LOW_THR` / `BAT_CRIT_THR` defaults. |
+| `min_duration_s` | `1.0` | s | Applies to the low-voltage and remaining checks. Heuristic. |
+| **attitude** | | | |
+| `error_warn_deg` / `error_critical_deg` | `10` / `20` | ° | \|setpoint − actual\| for roll and pitch, wrapped to ±180°. Heuristic. |
+| `min_duration_s` | `1.0` | s | Heuristic. |
+| **motors** | | | |
+| `saturation_level` | `0.95` | 0–1 | A normalized output at or above this level counts as saturated. |
+| `saturation_warn_s` / `saturation_critical_s` | `0.5` / `2.0` | s | How long a single motor must stay saturated. Heuristic. |
+| `imbalance_window_s` | `5.0` | s | Rolling mean per motor. Imbalance = that mean minus the mean across all motors. |
+| `imbalance_warn` / `imbalance_critical` | `0.15` / `0.25` | 0–1 | Heuristic. |
+| `imbalance_min_duration_s` | `5.0` | s | Heuristic. The imbalance check is skipped when the motor count is unknown (`LogMetadata.motor_count_known = false`), because servo outputs would show up as imbalance. |
