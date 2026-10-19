@@ -24,7 +24,8 @@ Unknown keys are rejected so a typo does not silently fall back to the default.
 | Key | Default | Unit | Meaning |
 |---|---|---|---|
 | `merge_tolerance_s` | `0.5` | s | When a slower topic (attitude setpoint, position setpoint) is aligned onto a faster time base, the latest sample at or before `t` is used only if it is at most this old. Older samples become NaN instead of a stale value. Cumulative counters (`clip_count`) ignore this tolerance. |
-| `vibration_window_s` | `0.5` | s | Rolling window for the per-axis accelerometer standard deviation that becomes `vib_x/y/z` on PX4 logs. It is applied to the raw (logged) accelerometer samples, so the effective number of samples depends on the logging rate. |
+| `status_tolerance_s` | `1.5` | s | Same as `merge_tolerance_s`, but for ~1 Hz status topics (`vehicle_imu_status` vibration metrics). |
+| `vibration_window_s` | `0.5` | s | Rolling window for the per-axis accelerometer standard deviation that becomes `vib_x/y/z` on PX4 logs. It is informational only (plots); no detector thresholds it, because `sensor_combined` is downsampled and filtered and therefore under-reads vibration. |
 | `motors.use_log_params` | `true` | – | Read the PWM range from the log parameters: `PWM_MAIN_MINn`/`PWM_MAIN_MAXn` first, then the global `PWM_MIN`/`PWM_MAX`. Values ≤ 0 (PX4's "unset") are skipped. |
 | `motors.pwm_min_us` | `1000` | µs | Fallback PWM value for 0 % throttle when no log parameter is usable. |
 | `motors.pwm_max_us` | `2000` | µs | Fallback PWM value for 100 % throttle. |
@@ -35,7 +36,7 @@ Unknown keys are rejected so a typo does not silently fall back to the default.
 - `t` is seconds relative to the ULog start timestamp. The first samples can be slightly negative because some topics are logged at subscription time.
 - Angles are in radians. The attitude setpoint is taken from `q_d` when present, otherwise from `roll_body`/`pitch_body`/`yaw_body`.
 - `motors` uses `actuator_motors` (already 0–1) when available, otherwise normalizes `actuator_outputs` (PWM) to 0–1. Values are clipped to [0, 1]. DShot outputs are not handled yet.
-- `vibration.clip_count` is the cumulative sum of `vehicle_imu_status.accel_clipping[0..2]` for IMU instance 0.
+- `vibration` columns: `vib_x/y/z` (informational), `accel_vib_metric`, `gyro_vib_metric` and `clip_count` (cumulative). With several IMUs the value at each time step is the maximum over instances (the worst IMU). See the vibration source table below.
 - Event kinds are `mode`, `arm`, `disarm`, `failsafe`, `error` (log level ≤ ERR), `warning` and `info`.
 
 ## `detectors`
@@ -55,10 +56,18 @@ How every detector works:
 | `only_when_armed` | `true` | – | Ignore samples while disarmed. |
 | `merge_gap_s` | `0.5` | s | Merge violations closer than this gap. `0` is allowed. |
 | **vibration** | | | |
-| `accel_std_warn` / `accel_std_critical` | `30` / `60` | m/s² | ArduPilot vibration guidance for `VIBE` (below 30 is acceptable, above 60 almost always causes problems). On PX4 logs `vib_*` is the rolling std of the logged accelerometer, which only approximates `VIBE`. |
-| `min_duration_s` | `1.0` | s | Heuristic. |
-| `clip_critical_count` | `100` | events | Any clipping while armed is a warning. A burst of at least this many events is critical. Heuristic. |
-| `clip_merge_gap_s` | `5.0` | s | Clipping events closer than this gap are reported as one finding. |
+| `min_duration_s` | `1.0` | s | Applies to the vibration-level check. Heuristic. |
+| `clip_merge_gap_s` | `5.0` | s | Clipping increments closer than this gap are reported as one finding. |
+| `<source>.metric_warn` / `<source>.metric_critical` | see below | source units | Applied to `vibration.accel_vib_metric`. `null` means the source is not calibrated: the check is skipped and a note is added. A log is never compared with another source's thresholds. |
+| `<source>.clip_critical_count` | `100` | clipped samples | A separate condition from the vibration level. Any clipping increment while armed is a warning; a burst totalling at least this many is critical. Heuristic for both sources, because PX4 counts clipped samples per axis and ArduPilot counts clip events per IMU. |
+
+Vibration metric sources (`LogMetadata.vib_metric_source`):
+
+| Source | `accel_vib_metric` | `gyro_vib_metric` | `clip_count` | Default thresholds |
+|---|---|---|---|---|
+| `px4_imu_status` | `vehicle_imu_status.accel_vibration_metric`, max over IMU instances | `gyro_vibration_metric`, max over instances | Per instance, the sum of `accel_clipping[0..2]`; max over instances | `null` until calibrated with `eval/calibrate_vibration.py`. The selection rule and the logs used are written as a comment in `defaults.yaml`. |
+| `ardupilot_vibe` | `VIBE`: max of VibeX/Y/Z (m/s²) | – (NaN) | `VIBE` Clip0/1/2, max over IMUs | 30 / 60 from the ArduPilot vibration guidance (below 30 is acceptable, above 60 almost always causes problems) |
+
 | **gps** | | | |
 | `min_fix_type` | `3` | – | No fix of at least this type while armed is a finding: **critical** if a fix existed earlier in the log (fix lost), **warn** if the vehicle was armed before the first fix (e.g. ALTCTL takeoff without GPS). Satellite, EPH and HDOP checks only run while the fix is valid, because receivers report sentinel values without a fix. |
 | `min_satellites` | `6` | – | PX4 `EKF2_REQ_NSATS` default. |

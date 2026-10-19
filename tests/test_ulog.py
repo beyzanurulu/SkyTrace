@@ -72,6 +72,9 @@ def test_fixture_values_in_physical_range(sample_ulog):
     assert ((motors >= 0) & (motors <= 1)).all().all()
 
     assert (log.vibration[["vib_x", "vib_y", "vib_z"]].dropna() >= 0).all().all()
+    assert log.metadata.vib_metric_source == "px4_imu_status"
+    assert log.vibration["accel_vib_metric"].notna().any()
+    assert (log.vibration["accel_vib_metric"].dropna() >= 0).all()
 
 
 def test_fixture_events(sample_ulog):
@@ -254,3 +257,71 @@ def test_setpoint_merge_respects_tolerance(monkeypatch):
     assert np.isnan(roll_sp[0])  # before first setpoint
     assert roll_sp[1] == 0.3  # 0.1 s old, within 0.5 s tolerance
     assert np.isnan(roll_sp[2])  # 1.9 s old, stale
+
+
+def _imu_status(multi_id, ts, accel, gyro, clips):
+    return _topic(
+        "vehicle_imu_status",
+        {
+            "timestamp": _ts(*ts),
+            "accel_vibration_metric": accel,
+            "gyro_vibration_metric": gyro,
+            "accel_clipping[0]": clips,
+            "accel_clipping[1]": [0] * len(ts),
+            "accel_clipping[2]": [1] * len(ts),
+        },
+        multi_id=multi_id,
+    )
+
+
+def test_vibration_metrics_take_max_over_imu_instances(monkeypatch):
+    acc = _topic(
+        "sensor_combined",
+        {
+            "timestamp": _ts(0, 0.5, 1.0, 1.5, 2.0),
+            "accelerometer_m_s2[0]": [0.0, 1.0, 0.0, 1.0, 0.0],
+            "accelerometer_m_s2[1]": [0.0] * 5,
+            "accelerometer_m_s2[2]": [-9.8] * 5,
+        },
+    )
+    imu0 = _imu_status(0, (0, 1), accel=[2.0, 9.0], gyro=[0.1, 0.1], clips=[0, 5])
+    imu1 = _imu_status(1, (0, 1), accel=[4.0, 3.0], gyro=[0.3, 0.05], clips=[10, 10])
+    log = _parse_fake(monkeypatch, _fake_ulog([acc, imu0, imu1]))
+    vib = log.vibration
+    assert log.metadata.vib_metric_source == "px4_imu_status"
+    assert vib["accel_vib_metric"].tolist() == [4.0, 4.0, 9.0, 9.0, 9.0]
+    assert vib["gyro_vib_metric"].tolist() == pytest.approx([0.3, 0.3, 0.1, 0.1, 0.1])
+    # cumulative clips per IMU = sum of axes (axis 2 adds 1): imu0 1 -> 6, imu1 11 -> 11
+    assert vib["clip_count"].tolist() == [11.0, 11.0, 11.0, 11.0, 11.0]
+
+
+def test_vibration_metric_stale_beyond_status_tolerance(monkeypatch):
+    acc = _topic(
+        "sensor_combined",
+        {
+            "timestamp": _ts(0, 1, 5),
+            "accelerometer_m_s2[0]": [0.0] * 3,
+            "accelerometer_m_s2[1]": [0.0] * 3,
+            "accelerometer_m_s2[2]": [0.0] * 3,
+        },
+    )
+    imu0 = _imu_status(0, (0,), accel=[2.0], gyro=[0.1], clips=[3])
+    vib = _parse_fake(monkeypatch, _fake_ulog([acc, imu0])).vibration
+    assert vib["accel_vib_metric"].tolist()[:2] == [2.0, 2.0]
+    assert np.isnan(vib["accel_vib_metric"].iloc[2])  # 5 s > status_tolerance_s (1.5 s)
+    assert vib["clip_count"].iloc[2] == 4.0  # cumulative counter carries forward
+
+
+def test_vibration_without_imu_status(monkeypatch):
+    acc = _topic(
+        "sensor_combined",
+        {
+            "timestamp": _ts(0, 1),
+            "accelerometer_m_s2[0]": [0.0, 0.0],
+            "accelerometer_m_s2[1]": [0.0, 0.0],
+            "accelerometer_m_s2[2]": [0.0, 0.0],
+        },
+    )
+    log = _parse_fake(monkeypatch, _fake_ulog([acc]))
+    assert log.metadata.vib_metric_source is None
+    assert log.vibration[["accel_vib_metric", "gyro_vib_metric", "clip_count"]].isna().all().all()

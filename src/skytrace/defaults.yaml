@@ -7,6 +7,9 @@ parser:
   # onto a faster time base. Farther samples become NaN instead of stale values.
   merge_tolerance_s: 0.5
 
+  # Same, for ~1 Hz status topics (vehicle_imu_status vibration metrics).
+  status_tolerance_s: 1.5
+
   # Rolling window (s) for the per-axis accelerometer standard deviation
   # used as vib_x / vib_y / vib_z on PX4 logs.
   vibration_window_s: 0.5
@@ -28,16 +31,30 @@ detectors:
   merge_gap_s: 0.5
 
   vibration:
-    # Per-axis accel std (m/s^2). Guidance from ArduPilot's VIBE metric:
-    # < 30 acceptable, > 30 may cause problems, > 60 almost always does.
-    accel_std_warn: 30.0
-    accel_std_critical: 60.0
+    # Checks vibration.accel_vib_metric and clip_count. Their scale depends on the
+    # source (LogMetadata.vib_metric_source), so each source has its own block and
+    # a log is only ever compared with the thresholds of its own source.
+    # metric_warn / metric_critical: null = not calibrated, check skipped (with a note).
     min_duration_s: 1.0
-    # Any accelerometer clipping while armed is a warning; this many clip events
-    # within one finding make it critical (heuristic).
-    clip_critical_count: 100
     # Clipping bursts closer than this (s) are reported as one finding.
     clip_merge_gap_s: 5.0
+
+    px4_imu_status:
+      # PX4 vehicle_imu_status.accel_vibration_metric (max over IMU instances).
+      # Calibrated with eval/calibrate_vibration.py, see the comment below once run.
+      metric_warn: null
+      metric_critical: null
+      # Any clipping while armed is a warning; this many clipped samples (sum of
+      # axes, max over IMUs) within one finding make it critical. Heuristic.
+      clip_critical_count: 100
+
+    ardupilot_vibe:
+      # ArduPilot VIBE (max of VibeX/Y/Z, m/s^2). ArduPilot guidance: < 30 acceptable,
+      # > 30 may cause problems, > 60 almost always does.
+      metric_warn: 30.0
+      metric_critical: 60.0
+      # VIBE Clip0/1/2 (max over IMUs). Heuristic.
+      clip_critical_count: 100
 
   gps:
     # fix_type below this (3 = 3D fix) while armed: critical if the fix was lost,

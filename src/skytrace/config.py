@@ -39,17 +39,33 @@ class MotorConfig:
 @dataclass(frozen=True)
 class ParserConfig:
     merge_tolerance_s: float
+    status_tolerance_s: float
     vibration_window_s: float
     motors: MotorConfig
 
 
 @dataclass(frozen=True)
-class VibrationDetectorConfig:
-    accel_std_warn: float
-    accel_std_critical: float
-    min_duration_s: float
+class VibrationSourceThresholds:
+    """Thresholds for one vibration metric source. ``None`` = not calibrated: check skipped."""
+
+    metric_warn: float | None
+    metric_critical: float | None
     clip_critical_count: int
+
+
+@dataclass(frozen=True)
+class VibrationDetectorConfig:
+    min_duration_s: float
     clip_merge_gap_s: float
+    px4_imu_status: VibrationSourceThresholds
+    ardupilot_vibe: VibrationSourceThresholds
+
+    def for_source(self, source: str) -> VibrationSourceThresholds:
+        """Thresholds for ``LogMetadata.vib_metric_source``; never falls back to another source."""
+        if source not in ("px4_imu_status", "ardupilot_vibe"):
+            raise KeyError(f"unknown vibration metric source: {source}")
+        result: VibrationSourceThresholds = getattr(self, source)
+        return result
 
 
 @dataclass(frozen=True)
@@ -187,8 +203,17 @@ def _check(cfg: SkyTraceConfig) -> None:
         raise ConfigError("parser.motors.pwm_max_us must be greater than pwm_min_us")
 
     d = cfg.detectors
+    for src in ("px4_imu_status", "ardupilot_vibe"):
+        v = d.vibration.for_source(src)
+        if v.metric_critical is not None and v.metric_warn is None:
+            raise ConfigError(f"detectors.vibration.{src}: metric_critical needs metric_warn")
+        if (
+            v.metric_warn is not None
+            and v.metric_critical is not None
+            and v.metric_critical < v.metric_warn
+        ):
+            raise ConfigError(f"detectors.vibration.{src}: critical must be >= warn")
     pairs = [
-        ("vibration.accel_std", d.vibration.accel_std_warn, d.vibration.accel_std_critical),
         (
             "battery.sag_*_v_per_cell",
             d.battery.sag_warn_v_per_cell,

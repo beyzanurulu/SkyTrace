@@ -18,12 +18,23 @@ if TYPE_CHECKING:
     from skytrace.config import SkyTraceConfig
 
 LogFormat = Literal["px4_ulog", "ardupilot_dataflash"]
+VibMetricSource = Literal["px4_imu_status", "ardupilot_vibe"]
+"""Where ``vibration.accel_vib_metric`` / ``clip_count`` come from. The scales differ
+per source, so detectors pick thresholds by source and never mix them."""
 
 TABLE_COLUMNS: Final[dict[str, tuple[str, ...]]] = {
     "attitude": ("t", "roll", "pitch", "yaw", "roll_sp", "pitch_sp", "yaw_sp"),
     "gps": ("t", "fix_type", "satellites", "eph", "hdop", "lat", "lon", "alt"),
     "battery": ("t", "voltage", "current", "remaining"),
-    "vibration": ("t", "vib_x", "vib_y", "vib_z", "clip_count"),
+    "vibration": (
+        "t",
+        "vib_x",
+        "vib_y",
+        "vib_z",
+        "accel_vib_metric",
+        "gyro_vib_metric",
+        "clip_count",
+    ),
     "position": ("t", "x", "y", "z", "vx", "vy", "vz", "z_sp"),
     "events": ("t", "kind", "message"),
 }
@@ -109,6 +120,7 @@ class LogMetadata:
     battery_cells: int | None = None
     motor_count_known: bool = True
     """False when the parser had to assume every output is a motor."""
+    vib_metric_source: VibMetricSource | None = None
 
 
 @dataclass

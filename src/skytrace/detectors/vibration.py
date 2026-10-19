@@ -1,10 +1,15 @@
-"""High vibration and accelerometer clipping."""
+"""High vibration and accelerometer clipping.
+
+Both checks use thresholds chosen by ``LogMetadata.vib_metric_source``: PX4's
+``accel_vibration_metric`` and ArduPilot's ``VIBE`` are on different scales,
+so a log is never compared against another source's thresholds.
+"""
 
 from __future__ import annotations
 
 import numpy as np
 
-from skytrace.config import DetectorsConfig
+from skytrace.config import DetectorsConfig, VibrationSourceThresholds
 from skytrace.detectors.base import (
     BoolArray,
     Finding,
@@ -24,42 +29,64 @@ def detect(log: FlightLog, cfg: DetectorsConfig, notes: list[str]) -> list[Findi
     if vib.empty:
         notes.append("vibration: no vibration data, detector skipped")
         return []
-    c = cfg.vibration
+    source = log.metadata.vib_metric_source
+    if source is None:
+        notes.append("vibration: vibration metric source unknown, detector skipped")
+        return []
+    thr = cfg.vibration.for_source(source)
     t = vib["t"].to_numpy(dtype=np.float64)
     active = active_mask(log, vib, cfg.only_when_armed)
-    findings: list[Finding] = []
+    findings = _metric(log, cfg, thr, source, t, active, notes)
+    findings += _clipping(log, cfg, thr, source, t, active, notes)
+    return findings
 
-    for axis in ("vib_x", "vib_y", "vib_z"):
 
-        def describe(
-            sev: Severity, value: float, thr: float, t0: float, t1: float, axis: str = axis
-        ) -> str:
-            return (
-                f"High vibration on {axis[-1].upper()} axis: peak {value:.1f} m/s² "
-                f"(threshold {thr:.1f}) over {t1 - t0:.1f} s"
-            )
+def _metric(
+    log: FlightLog,
+    cfg: DetectorsConfig,
+    thr: VibrationSourceThresholds,
+    source: str,
+    t: FloatArray,
+    active: BoolArray,
+    notes: list[str],
+) -> list[Finding]:
+    values = log.vibration["accel_vib_metric"].to_numpy(dtype=np.float64)
+    if np.isnan(values).all():
+        notes.append("vibration: no accel vibration metric, vibration level check skipped")
+        return []
+    if thr.metric_warn is None:
+        notes.append(
+            f"vibration: no calibrated thresholds for {source} "
+            f"(detectors.vibration.{source}.metric_warn), vibration level check skipped"
+        )
+        return []
 
-        findings += threshold_findings(
-            detector=NAME,
-            metric=axis,
-            t=t,
-            values=vib[axis].to_numpy(dtype=np.float64),
-            active=active,
-            warn=c.accel_std_warn,
-            critical=c.accel_std_critical,
-            direction="above",
-            min_duration_s=c.min_duration_s,
-            merge_gap_s=cfg.merge_gap_s,
-            describe=describe,
+    def describe(sev: Severity, value: float, threshold: float, t0: float, t1: float) -> str:
+        return (
+            f"High vibration: accel vibration metric {value:.2f} ({source}, "
+            f"threshold {threshold:.2f}) for {t1 - t0:.1f} s"
         )
 
-    findings += _clipping(log, cfg, t, active, notes)
-    return findings
+    return threshold_findings(
+        detector=NAME,
+        metric="accel_vib_metric",
+        t=t,
+        values=values,
+        active=active,
+        warn=thr.metric_warn,
+        critical=thr.metric_critical,
+        direction="above",
+        min_duration_s=cfg.vibration.min_duration_s,
+        merge_gap_s=cfg.merge_gap_s,
+        describe=describe,
+    )
 
 
 def _clipping(
     log: FlightLog,
     cfg: DetectorsConfig,
+    thr: VibrationSourceThresholds,
+    source: str,
     t: FloatArray,
     active: BoolArray,
     notes: list[str],
@@ -73,13 +100,12 @@ def _clipping(
     inc = np.where(np.isnan(inc) | (inc < 0), 0.0, inc)
     mask = active & (inc > 0)
 
-    c = cfg.vibration
     findings: list[Finding] = []
-    for i, j in intervals(t, mask, min_duration_s=0.0, merge_gap_s=c.clip_merge_gap_s):
+    for i, j in intervals(t, mask, min_duration_s=0.0, merge_gap_s=cfg.vibration.clip_merge_gap_s):
         total = float(inc[i : j + 1].sum())
-        critical = total >= c.clip_critical_count
+        critical = total >= thr.clip_critical_count
         severity: Severity = "critical" if critical else "warn"
-        threshold = float(c.clip_critical_count) if critical else 0.0
+        threshold = float(thr.clip_critical_count) if critical else 0.0
         t0, t1 = float(t[i]), float(t[j])
         findings.append(
             Finding(
@@ -91,7 +117,8 @@ def _clipping(
                 value=total,
                 threshold=threshold,
                 summary=(
-                    f"Accelerometer clipping: {total:.0f} events between {t0:.1f} s and {t1:.1f} s"
+                    f"Accelerometer clipping: {total:.0f} clipped samples ({source}) between "
+                    f"{t0:.1f} s and {t1:.1f} s"
                 ),
             )
         )

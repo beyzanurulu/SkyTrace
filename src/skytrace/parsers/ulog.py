@@ -20,7 +20,13 @@ import pandas as pd
 from pyulog import ULog
 
 from skytrace.config import MotorConfig, SkyTraceConfig, load_config
-from skytrace.parsers.schema import FlightLog, LogMetadata, empty_table, time_index
+from skytrace.parsers.schema import (
+    FlightLog,
+    LogMetadata,
+    VibMetricSource,
+    empty_table,
+    time_index,
+)
 
 TOPIC_CANDIDATES: Final[dict[str, tuple[str, ...]]] = {
     "attitude": ("vehicle_attitude",),
@@ -322,29 +328,80 @@ def _motors(topics: _Topics, cfg: SkyTraceConfig, warnings: list[str]) -> pd.Dat
     return out
 
 
-def _vibration(topics: _Topics, cfg: SkyTraceConfig, warnings: list[str]) -> pd.DataFrame:
-    found = topics.get("accel")
-    if found is None:
-        warnings.append("vibration: no sensor_combined topic")
-        return empty_table("vibration")
-    _, acc = found
-    window = pd.Timedelta(seconds=cfg.parser.vibration_window_s)
-    idx = time_index(acc["t"])
-    out = pd.DataFrame({"t": acc["t"]})
-    for axis, i in (("vib_x", 0), ("vib_y", 1), ("vib_z", 2)):
-        series = pd.Series(_col(acc, f"accelerometer_m_s2[{i}]").to_numpy(), index=idx)
-        out[axis] = series.rolling(window, min_periods=2).std().to_numpy()
+def _imu_status_frames(topics: _Topics) -> list[pd.DataFrame]:
+    return [
+        f[1]
+        for mid in topics.instances("vehicle_imu_status")
+        if (f := topics.get("imu_status", mid)) is not None
+    ]
 
-    imu = topics.get("imu_status", 0)
-    if imu is None or not _indexed_columns(imu[1], "accel_clipping"):
-        warnings.append("vibration: no vehicle_imu_status clipping counters, clip_count is NaN")
-        out["clip_count"] = np.nan
+
+def _vibration(topics: _Topics, cfg: SkyTraceConfig, warnings: list[str]) -> pd.DataFrame:
+    acc_found = topics.get("accel")
+    imus = _imu_status_frames(topics)
+    if acc_found is None and not imus:
+        warnings.append("vibration: no sensor_combined / vehicle_imu_status topic")
+        return empty_table("vibration")
+
+    if acc_found is not None:
+        _, acc = acc_found
+        window = pd.Timedelta(seconds=cfg.parser.vibration_window_s)
+        idx = time_index(acc["t"])
+        out = pd.DataFrame({"t": acc["t"]})
+        for axis, i in (("vib_x", 0), ("vib_y", 1), ("vib_z", 2)):
+            series = pd.Series(_col(acc, f"accelerometer_m_s2[{i}]").to_numpy(), index=idx)
+            out[axis] = series.rolling(window, min_periods=2).std().to_numpy()
+    else:
+        warnings.append("vibration: no sensor_combined topic, vib_x/y/z are NaN")
+        times = np.unique(np.concatenate([st["t"].to_numpy(dtype=np.float64) for st in imus]))
+        out = pd.DataFrame({"t": times})
+        for axis in ("vib_x", "vib_y", "vib_z"):
+            out[axis] = np.nan
+
+    if not imus:
+        warnings.append(
+            "vibration: no vehicle_imu_status, accel/gyro vibration metrics and clip_count are NaN"
+        )
+        for c in ("accel_vib_metric", "gyro_vib_metric", "clip_count"):
+            out[c] = np.nan
         return out
-    _, st = imu
-    clip_cols = _indexed_columns(st, "accel_clipping")
-    clips = pd.DataFrame({"t": st["t"], "clip_count": st[clip_cols].astype("float64").sum(axis=1)})
-    # Cumulative counter: the last value stays valid until the next update, so no tolerance.
-    return pd.merge_asof(out, clips, on="t", direction="backward")
+
+    # One column per IMU instance, aligned on the vibration time base; the schema
+    # value is the maximum over instances at each time step (worst IMU wins).
+    tol = cfg.parser.status_tolerance_s
+    accel_cols, gyro_cols, clip_cols = [], [], []
+    for k, st in enumerate(imus):
+        metrics = pd.DataFrame(
+            {
+                "t": st["t"],
+                f"_a{k}": _col(st, "accel_vibration_metric"),
+                f"_g{k}": _col(st, "gyro_vibration_metric"),
+            }
+        )
+        out = _asof(out, metrics, tol)
+        axes = _indexed_columns(st, "accel_clipping")
+        clip = (
+            st[axes].astype("float64").sum(axis=1)
+            if axes
+            else pd.Series(np.nan, index=st.index, dtype="float64")
+        )
+        # Cumulative counter: the last value stays valid until the next update, so no tolerance.
+        out = pd.merge_asof(
+            out, pd.DataFrame({"t": st["t"], f"_c{k}": clip}), on="t", direction="backward"
+        )
+        accel_cols.append(f"_a{k}")
+        gyro_cols.append(f"_g{k}")
+        clip_cols.append(f"_c{k}")
+
+    out["accel_vib_metric"] = out[accel_cols].max(axis=1)
+    out["gyro_vib_metric"] = out[gyro_cols].max(axis=1)
+    out["clip_count"] = out[clip_cols].max(axis=1)
+    return out.drop(columns=accel_cols + gyro_cols + clip_cols)
+
+
+def _vib_metric_source(topics: _Topics) -> VibMetricSource | None:
+    has_metric = any("accel_vibration_metric" in st for st in _imu_status_frames(topics))
+    return "px4_imu_status" if has_metric else None
 
 
 def _position(topics: _Topics, cfg: SkyTraceConfig, warnings: list[str]) -> pd.DataFrame:
@@ -439,6 +496,7 @@ def _metadata(path: Path, ulog: _ULogLike, topics: _Topics, cfg: SkyTraceConfig)
         vehicle_type=vehicle_type,
         battery_cells=_battery_cells(topics),
         motor_count_known=_motor_count_known(topics, cfg.parser.motors),
+        vib_metric_source=_vib_metric_source(topics),
     )
 
 

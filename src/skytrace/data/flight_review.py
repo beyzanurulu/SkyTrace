@@ -118,6 +118,8 @@ class LogEntry:
     vehicle_uuid: str | None
     airframe_name: str | None
     ver_sw: str | None
+    sys_hw: str | None
+    duration_s: float | None
     raw: dict[str, Any] = field(compare=False, repr=False)
 
     @classmethod
@@ -134,6 +136,8 @@ class LogEntry:
             vehicle_uuid=item.get("vehicle_uuid"),
             airframe_name=item.get("airframe_name"),
             ver_sw=item.get("ver_sw"),
+            sys_hw=item.get("sys_hw") or None,
+            duration_s=None if item.get("duration_s") is None else float(item["duration_s"]),
             raw=item,
         )
 
@@ -180,9 +184,19 @@ def filter_entries(
     error_labels: Sequence[str] | None = None,
     ratings: Sequence[str] | None = None,
     since: date | None = None,
+    no_error_labels: bool = False,
+    exclude_hw: Sequence[str] | None = None,
+    min_duration_s: float | None = None,
+    max_duration_s: float | None = None,
+    max_per_vehicle: int | None = None,
     max_num: int | None = DEFAULT_MAX_NUM,
 ) -> list[LogEntry]:
-    """Filter like the official script (labels: entry must have all), newest first."""
+    """Filter like the official script (labels: entry must have all), newest first.
+
+    ``no_error_labels`` keeps only entries without any label (negatives for eval);
+    ``max_per_vehicle`` caps logs per ``vehicle_uuid`` so one airframe cannot
+    dominate a dataset (entries without uuid count as their own vehicle).
+    """
     out = list(entries)
     if mav_types:
         wanted = {m.lower() for m in mav_types}
@@ -195,7 +209,25 @@ def filter_entries(
         out = [e for e in out if e.rating.lower() in wanted_r]
     if since is not None:
         out = [e for e in out if e.log_date >= since]
-    out.sort(key=lambda e: e.log_date, reverse=True)
+    if no_error_labels:
+        out = [e for e in out if not e.error_labels]
+    if exclude_hw:
+        excluded = {h.upper() for h in exclude_hw}
+        out = [e for e in out if (e.sys_hw or "").upper() not in excluded]
+    if min_duration_s is not None:
+        out = [e for e in out if e.duration_s is not None and e.duration_s >= min_duration_s]
+    if max_duration_s is not None:
+        out = [e for e in out if e.duration_s is not None and e.duration_s <= max_duration_s]
+    out.sort(key=lambda e: (e.log_date, e.log_id), reverse=True)
+    if max_per_vehicle is not None:
+        seen: dict[str, int] = {}
+        capped = []
+        for e in out:
+            key = e.vehicle_uuid or f"log:{e.log_id}"
+            if seen.get(key, 0) < max_per_vehicle:
+                seen[key] = seen.get(key, 0) + 1
+                capped.append(e)
+        out = capped
     return out if max_num is None else out[:max_num]
 
 
@@ -298,6 +330,11 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--error-label", nargs="+", choices=sorted(ERROR_LABELS.values()))
     p.add_argument("--rating", nargs="+", help="e.g. Good")
     p.add_argument("--since", type=date.fromisoformat, help="YYYY-MM-DD")
+    p.add_argument("--no-error-labels", action="store_true", help="only logs without labels")
+    p.add_argument("--exclude-hw", nargs="+", help="e.g. PX4_SITL")
+    p.add_argument("--min-duration", type=float, help="seconds")
+    p.add_argument("--max-duration", type=float, help="seconds")
+    p.add_argument("--max-per-vehicle", type=int, help="cap logs per vehicle_uuid")
     p.add_argument("--delay", type=float, default=DEFAULT_DELAY_S)
     p.add_argument("--overwrite", action="store_true")
     p.add_argument("--refresh-index", action="store_true", help="ignore the cached index")
@@ -325,6 +362,11 @@ def main(argv: Sequence[str] | None = None, client: HttpClient | None = None) ->
         error_labels=args.error_label,
         ratings=args.rating,
         since=args.since,
+        no_error_labels=args.no_error_labels,
+        exclude_hw=args.exclude_hw,
+        min_duration_s=args.min_duration,
+        max_duration_s=args.max_duration,
+        max_per_vehicle=args.max_per_vehicle,
         max_num=args.max_num,
     )
     print(f"{len(entries)} public logs, {len(selected)} selected")

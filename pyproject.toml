@@ -20,6 +20,9 @@ dev = [
     "ruff>=0.6",
     "types-pyyaml>=6.0",
 ]
+eval = [
+    "matplotlib>=3.11.2",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -41,7 +44,7 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "ANN"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["src", "tests"]
+files = ["src", "tests", "eval"]
 
 [[tool.mypy.overrides]]
 module = "skytrace.*"

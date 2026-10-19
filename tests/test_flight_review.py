@@ -107,6 +107,37 @@ def test_filter_entries():
     assert len(filter_entries(entries, max_num=2)) == 2
 
 
+def test_filter_negatives_hardware_duration_and_vehicle_cap():
+    entries = [
+        LogEntry.from_json(
+            _item("v1a", "2026-09-05", vehicle_uuid="v1", sys_hw="FMU_V6X", duration_s=300)
+        ),
+        LogEntry.from_json(
+            _item("v1b", "2026-09-04", vehicle_uuid="v1", sys_hw="FMU_V6X", duration_s=300)
+        ),
+        LogEntry.from_json(
+            _item("v2", "2026-09-03", vehicle_uuid="v2", sys_hw="FMU_V6X", duration_s=20)
+        ),
+        LogEntry.from_json(
+            _item("sitl", "2026-09-02", vehicle_uuid="v3", sys_hw="PX4_SITL", duration_s=300)
+        ),
+        LogEntry.from_json(
+            _item("lab", "2026-09-01", labels=[2], vehicle_uuid="v4", duration_s=300)
+        ),
+        LogEntry.from_json(_item("nouuid", "2026-08-01", vehicle_uuid="", duration_s=300)),
+    ]
+    got = filter_entries(
+        entries,
+        no_error_labels=True,
+        exclude_hw=["px4_sitl"],
+        min_duration_s=60,
+        max_per_vehicle=1,
+        max_num=None,
+    )
+    assert [e.log_id for e in got] == ["v1a", "nouuid"]
+    assert entries[0].sys_hw == "FMU_V6X" and entries[0].duration_s == 300.0
+
+
 # --- download ----------------------------------------------------------------
 
 

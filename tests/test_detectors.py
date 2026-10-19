@@ -1,8 +1,11 @@
+from dataclasses import replace
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from skytrace import FlightLog
+from skytrace.config import VibrationSourceThresholds, load_config
 from skytrace.detectors import DETECTORS, run_detectors
 from tests.factories import events, make_log, override, step, time_axis
 
@@ -16,76 +19,119 @@ def _only(log, name, config=None):
 # --- vibration ---------------------------------------------------------------
 
 
-def _vibration(t, z, clips=None):
+AP = {"vib_metric_source": "ardupilot_vibe"}
+PX4 = {"vib_metric_source": "px4_imu_status"}
+
+
+def _vibration(t, metric, clips=None):
+    n = len(t)
     return pd.DataFrame(
         {
             "t": t,
-            "vib_x": np.full(len(t), 5.0),
-            "vib_y": np.full(len(t), 5.0),
-            "vib_z": z,
-            "clip_count": np.zeros(len(t)) if clips is None else clips,
+            "vib_x": np.full(n, 5.0),
+            "vib_y": np.full(n, 5.0),
+            "vib_z": np.full(n, 5.0),
+            "accel_vib_metric": metric,
+            "gyro_vib_metric": np.full(n, 0.1),
+            "clip_count": np.zeros(n) if clips is None else clips,
         }
     )
 
 
+def _px4_thresholds(warn, critical, clip=100):
+    base = load_config()
+    vib = replace(
+        base.detectors.vibration,
+        px4_imu_status=VibrationSourceThresholds(warn, critical, clip),
+    )
+    return replace(base, detectors=replace(base.detectors, vibration=vib))
+
+
 def test_vibration_clean():
     t = time_axis(60)
-    r = _only(
-        make_log(vibration=_vibration(t, np.full(len(t), 10.0)), events=ARMED_0_60), "vibration"
-    )
-    assert r.findings == []
+    log = make_log(vibration=_vibration(t, np.full(len(t), 10.0)), events=ARMED_0_60, metadata=AP)
+    assert _only(log, "vibration").findings == []
 
 
 @pytest.mark.parametrize(("level", "severity"), [(40.0, "warn"), (70.0, "critical")])
-def test_vibration_levels(level, severity):
+def test_vibration_levels_ardupilot(level, severity):
     t = time_axis(60)
-    z = step(t, 10.0, level, 10.0, 15.0)
-    r = _only(make_log(vibration=_vibration(t, z), events=ARMED_0_60), "vibration")
-    (f,) = r.findings
-    assert (f.severity, f.metric, f.value) == (severity, "vib_z", level)
+    metric = step(t, 10.0, level, 10.0, 15.0)
+    log = make_log(vibration=_vibration(t, metric), events=ARMED_0_60, metadata=AP)
+    (f,) = _only(log, "vibration").findings
+    assert (f.severity, f.metric, f.value) == (severity, "accel_vib_metric", level)
     assert f.t_start == pytest.approx(10.0)
     assert f.t_end == pytest.approx(15.0)
-    assert "Z axis" in f.summary
+    assert "ardupilot_vibe" in f.summary
+
+
+def test_vibration_thresholds_follow_metric_source():
+    t = time_axis(60)
+    metric = step(t, 2.0, 40.0, 10.0, 15.0)  # 40: above VIBE warn, and above the PX4 values below
+    vib = _vibration(t, metric)
+    cfg = _px4_thresholds(50.0, 80.0)  # PX4 scale deliberately different
+    ap = _only(make_log(vibration=vib, events=ARMED_0_60, metadata=AP), "vibration", cfg)
+    px4 = _only(make_log(vibration=vib, events=ARMED_0_60, metadata=PX4), "vibration", cfg)
+    assert [f.severity for f in ap.findings] == ["warn"]  # 40 > 30 (ardupilot_vibe)
+    assert px4.findings == []  # 40 < 50 (px4_imu_status)
+
+
+def test_vibration_uncalibrated_source_is_a_note_not_a_fallback():
+    t = time_axis(60)
+    metric = step(t, 2.0, 500.0, 10.0, 15.0)  # huge, but PX4 thresholds are null by default
+    log = make_log(vibration=_vibration(t, metric), events=ARMED_0_60, metadata=PX4)
+    r = _only(log, "vibration")
+    assert r.findings == []
+    assert any("no calibrated thresholds for px4_imu_status" in n for n in r.notes)
+
+
+def test_vibration_unknown_source_is_a_note():
+    t = time_axis(10)
+    r = _only(make_log(vibration=_vibration(t, np.full(len(t), 99.0))), "vibration")
+    assert r.findings == []
+    assert any("source unknown" in n for n in r.notes)
 
 
 def test_vibration_short_spike_ignored():
     t = time_axis(60)
-    z = step(t, 10.0, 90.0, 10.0, 10.5)  # shorter than min_duration_s = 1.0
-    r = _only(make_log(vibration=_vibration(t, z), events=ARMED_0_60), "vibration")
-    assert r.findings == []
+    metric = step(t, 10.0, 90.0, 10.0, 10.5)  # shorter than min_duration_s = 1.0
+    log = make_log(vibration=_vibration(t, metric), events=ARMED_0_60, metadata=AP)
+    assert _only(log, "vibration").findings == []
 
 
 def test_vibration_ignored_while_disarmed():
     t = time_axis(60)
-    z = step(t, 10.0, 90.0, 10.0, 20.0)
+    metric = step(t, 10.0, 90.0, 10.0, 20.0)
     log = make_log(
-        vibration=_vibration(t, z),
+        vibration=_vibration(t, metric),
         events=events((30.0, "arm", "armed"), (50.0, "disarm", "disarmed")),
+        metadata=AP,
     )
     assert _only(log, "vibration").findings == []
     no_arm_filter = override(detectors={"only_when_armed": False})
     assert len(_only(log, "vibration", no_arm_filter).findings) == 1
 
 
-def test_clipping_warn_and_critical():
+def test_clipping_is_separate_condition_with_source_thresholds():
     t = time_axis(60)
     clips = np.zeros(len(t))
     clips[t >= 5] += 3  # small burst -> warn
-    clips[t >= 30] += 200  # big burst -> critical
-    r = _only(
-        make_log(vibration=_vibration(t, np.full(len(t), 5.0), clips), events=ARMED_0_60),
-        "vibration",
-    )
+    clips[t >= 30] += 200  # big burst -> critical with clip_critical_count 100
+    vib = _vibration(t, np.full(len(t), 5.0), clips)  # vibration level itself is fine
+    r = _only(make_log(vibration=vib, events=ARMED_0_60, metadata=PX4), "vibration")
     assert [(f.metric, f.severity, f.value) for f in r.findings] == [
         ("clip_count", "warn", 3.0),
         ("clip_count", "critical", 200.0),
     ]
+    stricter = _px4_thresholds(None, None, clip=2)
+    r = _only(make_log(vibration=vib, events=ARMED_0_60, metadata=PX4), "vibration", stricter)
+    assert [f.severity for f in r.findings] == ["critical", "critical"]
 
 
 def test_clipping_missing_counter_is_a_note():
     t = time_axis(10)
-    log = make_log(vibration=_vibration(t, np.full(len(t), 5.0), np.full(len(t), np.nan)))
-    r = _only(log, "vibration")
+    vib = _vibration(t, np.full(len(t), 5.0), np.full(len(t), np.nan))
+    r = _only(make_log(vibration=vib, metadata=AP), "vibration")
     assert r.findings == []
     assert any("clipping" in n for n in r.notes)
 
@@ -359,6 +405,7 @@ def test_run_detectors_ids_sorted_by_time():
         gps=_gps(t, fix_type=step(t, 3, 1, 40, 45)),
         vibration=_vibration(t, step(t, 10.0, 70.0, 5.0, 8.0)),
         events=ARMED_0_60,
+        metadata=AP,
     )
     r = run_detectors(log)
     assert [f.id for f in r.findings] == ["F001", "F002"]
