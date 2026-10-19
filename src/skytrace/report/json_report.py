@@ -28,7 +28,7 @@ def _clean(value: Any) -> Any:  # noqa: ANN401 (recursive JSON value)
 
 def report_dict(log: FlightLog, result: DetectionResult) -> dict[str, Any]:
     severities = [f.severity for f in result.findings]
-    return _clean(
+    cleaned: dict[str, Any] = _clean(
         {
             "schema_version": SCHEMA_VERSION,
             "skytrace_version": __version__,
@@ -44,6 +44,7 @@ def report_dict(log: FlightLog, result: DetectionResult) -> dict[str, Any]:
             "parser_warnings": list(log.warnings),
         }
     )
+    return cleaned
 
 
 def write_json(log: FlightLog, result: DetectionResult, path: str | Path) -> Path:

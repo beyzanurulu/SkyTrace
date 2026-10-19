@@ -16,6 +16,9 @@ dependencies = [
     "typer>=0.27.3",
 ]
 
+[project.scripts]
+skytrace = "skytrace.cli:app"
+
 [dependency-groups]
 dev = [
     "mypy>=1.11",
@@ -64,7 +67,7 @@ disallow_untyped_calls = false
 check_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["pyulog", "pyulog.*", "pymavlink", "pymavlink.*"]
+module = ["pyulog", "pyulog.*", "pymavlink", "pymavlink.*", "plotly", "plotly.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

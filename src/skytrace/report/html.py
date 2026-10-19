@@ -78,11 +78,12 @@ def _intervals_from_events(
     log: FlightLog, kinds: tuple[str, ...], end: float
 ) -> list[tuple[float, float, str]]:
     ev = log.events[log.events["kind"].isin(kinds)].reset_index(drop=True)
+    times = ev["t"].astype(float).tolist()
+    labels = (ev["message"] if kinds == ("mode",) else ev["kind"]).astype(str).tolist()
     out = []
-    for i, row in ev.iterrows():
-        t0 = float(row["t"])
-        t1 = float(ev.loc[i + 1, "t"]) if i + 1 < len(ev) else end
-        out.append((t0, max(t1, t0), str(row["message"]) if kinds == ("mode",) else row["kind"]))
+    for i, (t0, label) in enumerate(zip(times, labels, strict=True)):
+        t1 = times[i + 1] if i + 1 < len(times) else end
+        out.append((t0, max(t1, t0), label))
     return out
 
 
@@ -154,7 +155,7 @@ def evidence_figure(ev: Evidence, finding: Finding) -> go.Figure:
     for tr in ev.traces:
         fig.add_scatter(
             x=tr.t,
-            y=np.where(np.isfinite(tr.y), tr.y, None),
+            y=[float(v) if np.isfinite(v) else None for v in tr.y],
             mode="lines",
             name=tr.name,
             line={"width": 2},
@@ -193,7 +194,7 @@ def _summary_rows(log: FlightLog, cfg: SkyTraceConfig) -> list[tuple[str, str]]:
     m = log.metadata
     cells = cfg.detectors.battery.cells or m.battery_cells
     motors = f"{log.motor_count}" + ("" if m.motor_count_known else " (count assumed)")
-    minutes, seconds = divmod(int(round(m.duration_s)), 60)
+    minutes, seconds = divmod(round(m.duration_s), 60)
     return [
         ("Log", Path(m.source).name),
         ("Format", m.format),
