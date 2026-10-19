@@ -62,7 +62,10 @@ def findings_table(result: DetectionResult) -> Table:
 @app.command()
 def analyze(
     log_path: Annotated[
-        Path, typer.Argument(exists=True, dir_okay=False, readable=True, help="Flight log (.ulg).")
+        Path,
+        typer.Argument(
+            exists=True, dir_okay=False, readable=True, help="Flight log (.ulg / .bin)."
+        ),
     ],
     out: Annotated[
         Path | None,
@@ -85,7 +88,7 @@ def analyze(
         cfg = load_config(config_path)
         log = FlightLog.from_file(log_path, cfg)
         result = run_detectors(log, cfg, only=only)
-    except (ConfigError, KeyError, ValueError, NotImplementedError) as exc:
+    except (ConfigError, KeyError, ValueError) as exc:
         console.print(f"[red]error:[/] {exc}")
         raise typer.Exit(code=2) from exc
 

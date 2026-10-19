@@ -70,8 +70,6 @@ def test_table_lookup():
 
 
 def test_from_file_dispatch(tmp_path):
-    with pytest.raises(NotImplementedError):
-        FlightLog.from_file(tmp_path / "flight.BIN")
     with pytest.raises(ValueError, match="unsupported"):
         FlightLog.from_file(tmp_path / "flight.csv")
 

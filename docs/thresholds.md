@@ -26,10 +26,20 @@ Unknown keys are rejected so a typo does not silently fall back to the default.
 | `merge_tolerance_s` | `0.5` | s | When a slower topic (attitude setpoint, position setpoint) is aligned onto a faster time base, the latest sample at or before `t` is used only if it is at most this old. Older samples become NaN instead of a stale value. Cumulative counters (`clip_count`) ignore this tolerance. |
 | `status_tolerance_s` | `1.5` | s | Same as `merge_tolerance_s`, but for ~1 Hz status topics (`vehicle_imu_status` vibration metrics). |
 | `vibration_window_s` | `0.5` | s | Rolling window for the per-axis accelerometer standard deviation that becomes `vib_x/y/z` on PX4 logs. It is informational only (plots); no detector thresholds it, because `sensor_combined` is downsampled and filtered and therefore under-reads vibration. |
-| `motors.use_log_params` | `true` | – | Read the PWM range from the log parameters: `PWM_MAIN_MINn`/`PWM_MAIN_MAXn` first, then the global `PWM_MIN`/`PWM_MAX`. Values ≤ 0 (PX4's "unset") are skipped. |
+| `motors.use_log_params` | `true` | – | Read the PWM range from the log parameters. PX4: `PWM_MAIN_MINn`/`PWM_MAIN_MAXn` first, then the global `PWM_MIN`/`PWM_MAX`. ArduPilot: `MOT_PWM_MIN`/`MOT_PWM_MAX`, then `RC3_MIN`/`RC3_MAX` (what ArduPilot itself uses when `MOT_PWM_*` is 0). Values ≤ 0 ("unset") are skipped. |
 | `motors.pwm_min_us` | `1000` | µs | Fallback PWM value for 0 % throttle when no log parameter is usable. |
 | `motors.pwm_max_us` | `2000` | µs | Fallback PWM value for 100 % throttle. |
-| `motors.count` | `null` | – | Number of motor channels. `null` means: use `CA_ROTOR_COUNT` from the log, otherwise all active outputs (and emit a warning). Set it explicitly for older logs that mix motors and servos on the same output group. |
+| `motors.count` | `null` | – | Number of motor channels. `null` means: use `CA_ROTOR_COUNT` (PX4) or the motor count of `FRAME_CLASS` (ArduPilot) from the log, otherwise all active outputs (and emit a warning). Set it explicitly for older logs that mix motors and servos on the same output group. |
+
+## Schema notes (ArduPilot)
+
+- Messages: `ATT`, `GPS` + `GPA` (EPH = `GPA.HAcc`), `BAT` (fallback `CURR`), `RCOU`, `VIBE`, `CTUN`, `MODE`, `ARM` (fallback `EV` 10/11), `ERR`, `MSG`, `PARM`. Only the lowest GPS / battery instance is used.
+- `t` is seconds relative to the first `TimeUS` in the log. Angles are converted from degrees to radians; altitudes are negated into NED `z`.
+- `vibration`: `vib_x/y/z` are `VibeX/Y/Z`, `accel_vib_metric` is their maximum, `clip_count` is the cumulative clip counter; with several IMUs the worst IMU wins at each time step. `gyro_vib_metric` is NaN. Thresholds come from the `ardupilot_vibe` block.
+- `position` only has `z`, `vz` and `z_sp` (from `CTUN`); `x/y/vx/vy` are NaN.
+- `ERR` subsystems named `FAILSAFE_*` become `failsafe` events, other non-zero codes `error`, code 0 on a non-failsafe subsystem `info` (resolved).
+- ArduPilot has no cell-count parameter: set `detectors.battery.cells` to enable the per-cell battery checks.
+- Firmware and vehicle type come from the version line ArduPilot logs at boot (`MSG`, e.g. `ArduCopter V4.5.7`).
 
 ## Schema notes (PX4)
 

@@ -2,6 +2,16 @@
 
 PX4 / ArduPilot flight log analysis, anomaly detection and Q&A. See [docs/PLAN.md](docs/PLAN.md).
 
+## Usage
+
+```
+skytrace analyze flight.ulg --out report.html          # PX4
+skytrace analyze flight.bin --format json -o out.json  # ArduPilot
+```
+
+The HTML report is a single offline file (Plotly embedded). Findings are also
+printed as a table in the terminal.
+
 ## Development
 
 ```

@@ -164,5 +164,7 @@ class FlightLog:
 
             return parse_ulog(p, config)
         if suffix == ".bin":
-            raise NotImplementedError("ArduPilot .bin parsing is not supported yet")
+            from skytrace.parsers.dataflash import parse_dataflash
+
+            return parse_dataflash(p, config)
         raise ValueError(f"unsupported log format: {p.suffix!r} (expected .ulg or .bin)")

@@ -10,6 +10,7 @@ dependencies = [
     "numpy>=1.26",
     "pandas>=2.2",
     "plotly>=7.1.0",
+    "pymavlink>=2.4.41",
     "pyulog>=1.1",
     "pyyaml>=6.0",
     "rich>=15.0.0",
