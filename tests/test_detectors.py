@@ -120,6 +120,33 @@ def test_gps_fix_loss_is_critical():
     assert (f.metric, f.severity, f.value, f.threshold) == ("fix_type", "critical", 1.0, 3.0)
 
 
+def test_gps_armed_before_first_fix_is_warn():
+    t = time_axis(60)
+    no_fix = t < 15
+    log = make_log(
+        gps=_gps(
+            t,
+            fix_type=np.where(no_fix, 0.0, 3.0),
+            satellites=np.where(no_fix, 0.0, 12.0),
+            eph=np.where(no_fix, 4294967.5, 0.9),  # receiver sentinel without fix
+            hdop=np.where(no_fix, 99.99, 0.8),
+        ),
+        events=ARMED_0_60,
+    )
+    (f,) = _only(log, "gps").findings  # one finding, no sentinel-driven quality findings
+    assert (f.metric, f.severity, f.value) == ("fix_type", "warn", 0.0)
+    assert "No 3D GPS fix yet" in f.summary
+
+
+def test_gps_quality_checks_only_with_fix():
+    t = time_axis(60)
+    fix = step(t, 3, 2, 20, 30)  # 2D fix
+    log = make_log(gps=_gps(t, fix_type=fix, eph=step(t, 0.8, 50.0, 20, 30)), events=ARMED_0_60)
+    found = _only(log, "gps").findings
+    assert [(f.metric, f.severity) for f in found] == [("fix_type", "critical")]
+    assert "lost" in found[0].summary
+
+
 def test_gps_quality_warnings():
     t = time_axis(60)
     log = make_log(

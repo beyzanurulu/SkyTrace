@@ -10,7 +10,7 @@ build/
 .pytest_cache/
 
 # Data: raw logs and eval data are never committed
-data/
+/data/
 *.ulg
 *.bin
 !tests/fixtures/*.ulg

@@ -409,7 +409,7 @@ def _events(topics: _Topics, ulog: _ULogLike, warnings: list[str]) -> pd.DataFra
         else:
             kind = "info"
         t = float(topics.rel_time(np.array([msg.timestamp]))[0])
-        rows.append((t, kind, str(msg.message)))
+        rows.append((t, kind, str(msg.message).strip()))
 
     if not rows:
         return empty_table("events")

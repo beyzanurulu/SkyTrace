@@ -60,7 +60,7 @@ How every detector works:
 | `clip_critical_count` | `100` | events | Any clipping while armed is a warning. A burst of at least this many events is critical. Heuristic. |
 | `clip_merge_gap_s` | `5.0` | s | Clipping events closer than this gap are reported as one finding. |
 | **gps** | | | |
-| `min_fix_type` | `3` | – | A fix below 3D while armed is always critical. |
+| `min_fix_type` | `3` | – | No fix of at least this type while armed is a finding: **critical** if a fix existed earlier in the log (fix lost), **warn** if the vehicle was armed before the first fix (e.g. ALTCTL takeoff without GPS). Satellite, EPH and HDOP checks only run while the fix is valid, because receivers report sentinel values without a fix. |
 | `min_satellites` | `6` | – | PX4 `EKF2_REQ_NSATS` default. |
 | `max_eph_m` | `3.0` | m | PX4 `EKF2_REQ_EPH` default. |
 | `max_hdop` | `2.5` | – | Adapted from PX4 `EKF2_REQ_PDOP` (2.5). HDOP ≤ PDOP, so this limit is slightly lenient. |

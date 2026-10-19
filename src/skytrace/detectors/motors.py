@@ -65,7 +65,7 @@ def _saturation(
                     value=duration,
                     threshold=c.saturation_critical_s if critical else c.saturation_warn_s,
                     summary=(
-                        f"Motor {n} saturated (output ≥ {c.saturation_level * 100:.0f}%) "
+                        f"Motor {n} saturated (output >= {c.saturation_level * 100:.0f}%) "
                         f"for {duration:.1f} s"
                     ),
                 )

@@ -40,7 +40,8 @@ detectors:
     clip_merge_gap_s: 5.0
 
   gps:
-    # fix_type below this (3 = 3D fix) while armed is critical.
+    # fix_type below this (3 = 3D fix) while armed: critical if the fix was lost,
+    # warn if the vehicle armed before acquiring a fix.
     min_fix_type: 3
     # PX4 EKF2_REQ_NSATS / EKF2_REQ_EPH defaults.
     min_satellites: 6
