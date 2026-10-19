@@ -28,6 +28,9 @@ log = FlightLog.from_file("flight.ulg")
 print(log.metadata, log.attitude.head())
 ```
 
+Detector evaluation on labeled logs: `uv run python eval/run_eval.py`
+(label format and SITL fault injection guide: [eval/SITL_GUIDE.md](eval/SITL_GUIDE.md)).
+
 Configurable defaults are documented in [docs/thresholds.md](docs/thresholds.md).
 
 Test fixture `tests/fixtures/sample_log_small.ulg` is taken from

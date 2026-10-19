@@ -1,0 +1,10 @@
+# Copy to data/labels/<log_id>.yaml (data/ is not committed).
+# Format and matching rules: src/skytrace/evaluation/labels.py
+log: 2026-10-20_gps_loss.ulg   # optional; default <log_id>.ulg / <log_id>.bin in data/raw/
+source: sitl                   # optional, free text
+faults:
+  - type: gps                  # vibration | gps | battery | attitude | motors
+    t_start: 62.4              # seconds since log start (same time base as SkyTrace)
+    t_end: 92.4
+    note: "failure gps off / ok"   # quote text: YAML reads bare off/on as booleans
+# A clean flight: faults: []
