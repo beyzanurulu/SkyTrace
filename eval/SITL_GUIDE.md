@@ -8,16 +8,46 @@ Amaç: arızayı bilerek enjekte edip **zamanını bildiğimiz** loglar üretmek
 > `failure help` ve [System Failure Injection](https://docs.px4.io/main/en/debug/failure_injection.html)
 > sayfasıyla kendi sürümünü kontrol et.
 
+## 0. Kısa yol: tüm kampanyayı otomatik çalıştır
+
+Kurulum (bölüm 1) bir kez yapıldıktan sonra uçuşları tek tek elle girmeye gerek
+yok. Windows'ta, SkyTrace klasöründe PowerShell'den:
+
+```powershell
+uv run python eval/sitl_plan.py            # data\sitl\plan.tsv: 10 temiz, 6 gps, 6 batarya, 6 motor
+powershell -ExecutionPolicy Bypass -File eval\sitl\run_scenarios.ps1
+```
+
+`run_scenarios.ps1` sırasıyla: planı Ubuntu'da uçurur (`eval/sitl/run_scenarios.sh`),
+her logu `data/raw/<run_id>.ulg` olarak kaydeder, etiketleri yazar
+(`eval/label_sitl.py`) ve değerlendirmeyi çalıştırır (`eval/run_eval.py`).
+Çalışırken bilgisayarın uykuya geçmesini engeller; uyku PX4 ile Gazebo'nun zaman
+eşlemesini bozar (`vehicle_imu ... timestamp error`, `Accel #0 fail: TIMEOUT`).
+Uçuş başına ~2-3 dk sürer; yarıda kalırsa tekrar çalıştır, kaydedilmiş uçuşlar atlanır.
+
+- Başka bir PX4 açıkken başlamaz: önce açık simülasyonu `Ctrl+C` ile kapat.
+- Zamanlamalar sabit seed ile rastgele (`--seed`); aralıklar `skytrace.evaluation.sitl.PlanRanges`.
+- Etiketler SkyTrace eşiklerinden değil, logdan gelir: `failure` komutları
+  (`vehicle_command` 420) ve PX4'ün kendi `battery_status.warning` kararı. Motor
+  arızası hem `motors` hem `attitude` olarak etiketlenir. Arızası logda
+  bulunamayan uçuş (ör. reddedilen komut) etiketlenmez, raporlanır.
+- Sadece Ubuntu tarafını çalıştırmak için: `bash eval/sitl/run_scenarios.sh [plan.tsv]`.
+
 ## 1. Kurulum (Ubuntu 22.04)
+
+Windows'ta önce WSL ile Ubuntu kur (yönetici PowerShell: `wsl --install -d Ubuntu-22.04`,
+sonra yeniden başlat) ve aşağıdaki komutları **Ubuntu terminalinde** çalıştır
+(satır `kullanıcı@makine:~$` ile başlar; `PS C:\...>` PowerShell'dir). PX4'ü Linux
+tarafına (`~`) klonla, `/mnt/c/...` altına değil.
 
 ```bash
 git clone https://github.com/PX4/PX4-Autopilot.git --recursive
-bash ./PX4-Autopilot/Tools/setup/ubuntu.sh   # bitince oturumu kapatıp aç
+bash ./PX4-Autopilot/Tools/setup/ubuntu.sh   # bitince Ubuntu penceresini kapatıp aç
 cd PX4-Autopilot
-make px4_sitl gz_x500                         # quadrotor, Gazebo penceresi açılır
+HEADLESS=1 make px4_sitl gz_x500              # quadrotor; HEADLESS=1: pencere yok (Windows 10 WSL)
 ```
 
-Komutlar Gazebo'yu başlatan terminaldeki `pxh>` kabuğuna yazılır.
+Komutlar simülasyonu başlatan terminaldeki `pxh>` kabuğuna yazılır.
 
 ## 2. Her uçuş için ortak adımlar
 
