@@ -103,6 +103,21 @@ def evidence_for(log: FlightLog, finding: Finding, cfg: SkyTraceConfig) -> Evide
             None,
             "",
         )
+    if det == "gps" and metric == "data_gap_s":
+        # Satellites over time: the shaded interval is where no sample exists at all.
+        # The threshold is a gap length, not a level of this series, so no line.
+        t, y = col("gps", "satellites")
+        # Break the line inside gaps; otherwise the plot connects across them.
+        cut = np.flatnonzero(np.diff(t) > cfg.detectors.gps.max_data_gap_s) + 1
+        t = np.insert(t, cut, (t[cut - 1] + t[cut]) / 2)
+        y = np.insert(y, cut, np.nan)
+        return make(
+            "GPS data gap",
+            "satellites (no line = no GPS samples)",
+            [_trace("satellites", t, y, win, cfg)],
+            None,
+            "",
+        )
     if det == "gps" and metric in ("fix_type", "satellites", "eph", "hdop"):
         t, y = col("gps", metric)
         units = {

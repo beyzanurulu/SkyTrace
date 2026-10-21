@@ -87,6 +87,48 @@ def armed_mask(log: FlightLog, t: FloatArray) -> BoolArray:
     return state
 
 
+def log_end(log: FlightLog) -> float:
+    """Last known time in the log: duration, or the latest sample of any table."""
+    end = log.metadata.duration_s
+    for name in ("attitude", "gps", "battery", "motors", "vibration", "position", "events"):
+        df = log.table(name)
+        if not df.empty:
+            end = max(end, float(df["t"].max()))
+    return end
+
+
+def active_intervals(log: FlightLog, only_when_armed: bool) -> list[tuple[float, float]]:
+    """Time ranges that detectors look at: armed periods, or the whole log.
+
+    Same semantics as :func:`armed_mask` (a log without arm/disarm events is armed
+    throughout; before the first event the state is the opposite of that event).
+    """
+    start, end = min(0.0, _first_time(log)), log_end(log)
+    ev = log.events[log.events["kind"].isin(["arm", "disarm"])]
+    if not only_when_armed or ev.empty:
+        return [(start, end)]
+    out: list[tuple[float, float]] = []
+    armed_since: float | None = start if ev["kind"].iloc[0] == "disarm" else None
+    for t, kind in zip(ev["t"].to_numpy(dtype=np.float64), ev["kind"], strict=True):
+        if kind == "arm" and armed_since is None:
+            armed_since = float(t)
+        elif kind == "disarm" and armed_since is not None:
+            out.append((armed_since, float(t)))
+            armed_since = None
+    if armed_since is not None:
+        out.append((armed_since, end))
+    return out
+
+
+def _first_time(log: FlightLog) -> float:
+    starts = [
+        float(log.table(n)["t"].min())
+        for n in ("attitude", "gps", "events")
+        if not log.table(n).empty
+    ]
+    return min(starts) if starts else 0.0
+
+
 def active_mask(log: FlightLog, df: pd.DataFrame, only_when_armed: bool) -> BoolArray:
     t = df["t"].to_numpy(dtype=np.float64)
     if only_when_armed:

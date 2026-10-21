@@ -43,6 +43,7 @@ packages = ["src/skytrace"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+extend-exclude = ["PX4-Autopilot"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "ANN"]

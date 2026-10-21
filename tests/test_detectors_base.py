@@ -2,7 +2,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from skytrace.detectors.base import armed_mask, intervals, rolling_time, threshold_findings
+from skytrace.detectors.base import (
+    active_intervals,
+    armed_mask,
+    intervals,
+    rolling_time,
+    threshold_findings,
+)
 from tests.factories import events, make_log, time_axis
 
 
@@ -113,3 +119,30 @@ def test_threshold_findings_below_ignores_nan_and_inactive():
     assert len(found) == 1
     assert found[0].t_start == pytest.approx(2.0)
     assert found[0].severity == "warn"
+
+
+def _log_with_events(*rows):
+    gps_t = np.arange(0.0, 60.0, 1.0)
+    gps = pd.DataFrame(
+        {
+            "t": gps_t,
+            **{
+                c: np.zeros(len(gps_t))
+                for c in ("fix_type", "satellites", "eph", "hdop", "lat", "lon", "alt")
+            },
+        }
+    )
+    return make_log(gps=gps, events=events(*rows))
+
+
+def test_active_intervals_follow_arm_disarm():
+    log = _log_with_events(
+        (5.0, "arm", "armed"), (20.0, "disarm", "disarmed"), (30.0, "arm", "armed")
+    )
+    assert active_intervals(log, True) == [(5.0, 20.0), (30.0, 60.0)]  # open until log end
+    assert active_intervals(log, False) == [(0.0, 60.0)]
+
+
+def test_active_intervals_log_starting_armed_and_no_events():
+    assert active_intervals(_log_with_events((10.0, "disarm", "disarmed")), True) == [(0.0, 10.0)]
+    assert active_intervals(_log_with_events(), True) == [(0.0, 60.0)]

@@ -193,6 +193,56 @@ def test_gps_quality_checks_only_with_fix():
     assert "lost" in found[0].summary
 
 
+def _drop(df, t0, t1):
+    """Remove all samples with t0 < t < t1 (a data gap)."""
+    return df[(df["t"] <= t0) | (df["t"] >= t1)].reset_index(drop=True)
+
+
+def test_gps_data_gap_mid_flight_is_critical():
+    t = time_axis(60)
+    gps = _drop(_gps(t), 20.0, 30.0)  # last sample before the gap still says 3D fix
+    found = _only(make_log(gps=gps, events=ARMED_0_60), "gps").findings
+    (f,) = found
+    assert (f.metric, f.severity) == ("data_gap_s", "critical")
+    assert f.t_start == pytest.approx(20.0)
+    assert f.t_end == pytest.approx(30.0)
+    assert f.value == pytest.approx(10.0)
+    assert "GPS data lost" in f.summary and "until data resumed" in f.summary
+
+
+def test_gps_data_never_resumes_until_disarm():
+    t = time_axis(60)
+    gps = _gps(t)[lambda d: d["t"] <= 40.0]
+    (f,) = _only(make_log(gps=gps, events=ARMED_0_60), "gps").findings
+    assert (f.metric, f.severity) == ("data_gap_s", "critical")
+    assert f.t_end == pytest.approx(59.0)  # disarm
+    assert "until disarm" in f.summary
+
+
+def test_gps_no_data_at_arming_is_warn():
+    t = time_axis(60)
+    gps = _gps(t)[lambda d: d["t"] >= 10.0].reset_index(drop=True)
+    (f,) = _only(make_log(gps=gps, events=ARMED_0_60), "gps").findings
+    assert (f.metric, f.severity) == ("data_gap_s", "warn")
+    assert "No GPS data" in f.summary
+
+
+def test_gps_gap_while_disarmed_and_normal_1hz_logging_are_ignored():
+    t = np.arange(0.0, 60.0, 1.0)  # 1 Hz, like sensor_gnss
+    gps = _drop(_gps(t), 2.0, 9.0)  # gap before arming
+    log = make_log(gps=gps, events=events((10.0, "arm", "armed"), (59.0, "disarm", "disarmed")))
+    assert _only(log, "gps").findings == []
+
+
+def test_gps_gap_threshold_from_config():
+    t = time_axis(60)
+    gps = _drop(_gps(t), 20.0, 22.0)  # 2 s gap
+    log = make_log(gps=gps, events=ARMED_0_60)
+    assert _only(log, "gps").findings == []
+    strict = override(gps={"max_data_gap_s": 1.0})
+    assert [f.metric for f in _only(log, "gps", strict).findings] == ["data_gap_s"]
+
+
 def test_gps_quality_warnings():
     t = time_axis(60)
     log = make_log(

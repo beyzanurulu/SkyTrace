@@ -1,4 +1,4 @@
-"""GPS problems: fix loss, low satellite count, high EPH / HDOP."""
+"""GPS problems: data loss, fix loss, low satellite count, high EPH / HDOP."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from skytrace.detectors.base import (
     Finding,
     FloatArray,
     Severity,
+    active_intervals,
     active_mask,
     intervals,
     threshold_findings,
@@ -33,7 +34,8 @@ def detect(log: FlightLog, cfg: DetectorsConfig, notes: list[str]) -> list[Findi
     fix = gps["fix_type"].to_numpy(dtype=np.float64)
     has_fix = fix >= c.min_fix_type  # NaN compares False
 
-    findings = _fix_findings(t, fix, has_fix, active, cfg)
+    findings = _gap_findings(log, t, has_fix, cfg)
+    findings += _fix_findings(t, fix, has_fix, active, cfg)
 
     def sats_text(sev: Severity, v: float, thr: float, t0: float, t1: float) -> str:
         return f"Low satellite count: {v:.0f} (minimum {thr:.0f}) for {t1 - t0:.1f} s"
@@ -65,6 +67,46 @@ def detect(log: FlightLog, cfg: DetectorsConfig, notes: list[str]) -> list[Findi
             merge_gap_s=cfg.merge_gap_s,
             describe=describe,
         )
+    return findings
+
+
+def _gap_findings(
+    log: FlightLog, t: FloatArray, has_fix: BoolArray, cfg: DetectorsConfig
+) -> list[Finding]:
+    """No GPS sample for more than ``max_data_gap_s`` inside an active (armed) period.
+
+    Critical if a valid fix was seen before the gap (data lost), else warn (no GPS
+    data yet). Also covers data that stops and never comes back before disarm.
+    """
+    limit = cfg.gps.max_data_gap_s
+    findings: list[Finding] = []
+    for a0, a1 in active_intervals(log, cfg.only_when_armed):
+        inside = (t >= a0) & (t <= a1)
+        ts = t[inside]
+        # Boundaries count as "last seen" / "seen again" so missing data at the
+        # start or end of the armed period is caught too.
+        edges = np.concatenate(([a0], ts, [a1]))
+        for k in np.flatnonzero(np.diff(edges) > limit):
+            g0, g1 = float(edges[k]), float(edges[k + 1])
+            lost = bool(has_fix[t <= g0].any())
+            severity: Severity = "critical" if lost else "warn"
+            what = "GPS data lost" if lost else "No GPS data"
+            ending = "until disarm / log end" if k + 1 == len(edges) - 1 else "until data resumed"
+            findings.append(
+                Finding(
+                    detector=NAME,
+                    severity=severity,
+                    t_start=g0,
+                    t_end=g1,
+                    metric="data_gap_s",
+                    value=g1 - g0,
+                    threshold=limit,
+                    summary=(
+                        f"{what}: no GPS samples for {g1 - g0:.1f} s ({ending}; "
+                        f"limit {limit:.1f} s)"
+                    ),
+                )
+            )
     return findings
 
 

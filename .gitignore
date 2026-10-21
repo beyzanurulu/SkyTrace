@@ -20,3 +20,6 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local PX4 checkout for SITL / PRs (separate repo; keep out of git, ruff, pytest)
+/PX4-Autopilot/

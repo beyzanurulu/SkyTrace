@@ -66,6 +66,11 @@ detectors:
     # Adapted from PX4 EKF2_REQ_PDOP (2.5); HDOP <= PDOP.
     max_hdop: 2.5
     min_duration_s: 1.0
+    # No GPS sample for longer than this (s) while armed = GPS data lost (receiver
+    # dropout / disconnect / PX4 "failure gps off"). The last sample before such a
+    # gap still reports a valid fix, so the fix check alone cannot see it. Heuristic:
+    # well above normal logging intervals (1 Hz for sensor_gnss, 5-30 Hz otherwise).
+    max_data_gap_s: 3.0
 
   battery:
     # Cell count. null = from the log (battery_status.cell_count / BAT1_N_CELLS);

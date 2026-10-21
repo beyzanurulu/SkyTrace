@@ -36,7 +36,7 @@ def test_log_text_cannot_break_out_of_script():
 def test_json_report_is_strict(analyzed, tmp_path):
     log, result = analyzed
     path = write_json(log, result, tmp_path / "r.json")
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     assert data["summary"]["findings"] == len(result.findings)
     assert [f["id"] for f in data["findings"]] == [f.id for f in result.findings]
 
@@ -56,3 +56,32 @@ def test_decimate_keeps_peak():
     td, yd = decimate(t, y, 100)
     assert len(td) <= 100
     assert yd.max() == 9.0
+
+
+def test_gps_gap_evidence_breaks_the_line():
+    import numpy as np
+    import pandas as pd
+
+    from skytrace.config import load_config
+    from skytrace.report.evidence import evidence_for
+
+    t = np.concatenate([np.arange(0.0, 20.0, 0.1), np.arange(30.0, 60.0, 0.1)])
+    gps = pd.DataFrame(
+        {
+            "t": t,
+            "fix_type": 3.0,
+            "satellites": 10.0,
+            "eph": 0.8,
+            "hdop": 0.7,
+            "lat": 41.0,
+            "lon": 29.0,
+            "alt": 100.0,
+        }
+    )
+    log = make_log(gps=gps, events=events((0.0, "arm", "armed"), (59.0, "disarm", "disarmed")))
+    (finding,) = run_detectors(log, only=["gps"]).findings
+    ev = evidence_for(log, finding, load_config())
+    assert ev is not None and ev.threshold is None
+    (trace,) = ev.traces
+    inside = (trace.t > 20.0) & (trace.t < 30.0)
+    assert inside.sum() == 1 and np.isnan(trace.y[inside]).all()  # one NaN breaks the line

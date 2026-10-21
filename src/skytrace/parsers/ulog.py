@@ -31,7 +31,8 @@ from skytrace.parsers.schema import (
 TOPIC_CANDIDATES: Final[dict[str, tuple[str, ...]]] = {
     "attitude": ("vehicle_attitude",),
     "attitude_sp": ("vehicle_attitude_setpoint",),
-    "gps": ("vehicle_gps_position", "sensor_gps"),
+    # vehicle_gnss / sensor_gnss: renamed in PX4 main (2026), receiver fields nested.
+    "gps": ("vehicle_gps_position", "vehicle_gnss", "sensor_gps", "sensor_gnss"),
     "battery": ("battery_status",),
     "motors": ("actuator_motors", "actuator_outputs"),
     "accel": ("sensor_combined",),
@@ -184,13 +185,20 @@ def _attitude(topics: _Topics, cfg: SkyTraceConfig, warnings: list[str]) -> pd.D
 def _gps(topics: _Topics, warnings: list[str]) -> pd.DataFrame:
     found = topics.get("gps")
     if found is None:
-        warnings.append("gps: no vehicle_gps_position / sensor_gps topic")
+        warnings.append("gps: no " + " / ".join(TOPIC_CANDIDATES["gps"]) + " topic")
         return empty_table("gps")
-    _, g = found
-    # PX4 >= 1.14 uses float degrees / metres; older releases use int 1e-7 deg / mm.
+    name, g = found
+    if name == "vehicle_gnss":
+        # Newest PX4 nests the receiver report: receiver.latitude, receiver.fix_type, ...
+        g = g.rename(columns=lambda c: c.removeprefix("receiver."))
+    # Float degrees / metres in PX4 >= 1.14 (*_deg / *_m) and in the gnss topics
+    # (latitude / altitude_msl); older releases use int 1e-7 deg / mm.
     if "latitude_deg" in g.columns:
         lat, lon = _col(g, "latitude_deg"), _col(g, "longitude_deg")
         alt = _col(g, "altitude_msl_m")
+    elif "latitude" in g.columns:
+        lat, lon = _col(g, "latitude"), _col(g, "longitude")
+        alt = _col(g, "altitude_msl")
     else:
         lat, lon = _col(g, "lat", scale=1e-7), _col(g, "lon", scale=1e-7)
         alt = _col(g, "alt", scale=1e-3)

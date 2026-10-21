@@ -149,7 +149,10 @@ def test_download_writes_files_index_and_rate_limits(tmp_path):
     assert (tmp_path / "a.ulg").read_bytes() == b"ULog\x01data"
     assert not list(tmp_path.glob("*.part"))
     assert rec.sleeps == [fr.DEFAULT_DELAY_S]  # between requests, not after the last one
-    index = [json.loads(line) for line in (tmp_path / "index.jsonl").read_text().splitlines()]
+    index = [
+        json.loads(line)
+        for line in (tmp_path / "index.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
     assert [r["log_id"] for r in index] == ["a", "b"]
     assert index[0]["log_date"] == "2026-09-01"
 

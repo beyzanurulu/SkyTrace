@@ -23,6 +23,7 @@ Komutlar Gazebo'yu başlatan terminaldeki `pxh>` kabuğuna yazılır.
 
 ```text
 pxh> param set SYS_FAILURE_EN 1     # failure komutlarını aç (her açılışta kontrol et)
+pxh> param set NAV_DLL_ACT 0        # sadece SITL: GCS bağlı değilken arm'ı engelleyen "No connection to the GCS"
 pxh> commander takeoff
 # ~10 s hover (temiz referans), sonra senaryodaki arızayı enjekte et
 # ... arızayı ~20-30 s sürdür, sonra geri al (varsa)
@@ -30,7 +31,8 @@ pxh> commander land
 ```
 
 - Log kaydı varsayılan olarak arm'dan disarm'a kadar sürer (`SDLOG_MODE=0`).
-- Loglar: `build/px4_sitl_default/rootfs/log/<tarih>/<saat>.ulg`. Dosyayı
+- Loglar: `build/px4_sitl_default/rootfs/fs/log/<tarih>/<saat>.ulg` (eski sürümlerde
+  `rootfs/log/`; emin değilsen `find build -name '*.ulg'`). Dosyayı
   `data/raw/<log_id>.ulg` olarak kopyala (anlamlı bir `log_id` seç, ör. `sitl_gps_01`).
 - Her senaryo için **en az bir de temiz uçuş** (arıza yok, `faults: []`) kaydet;
   yanlış alarm (precision) ancak böyle ölçülür.
@@ -41,7 +43,7 @@ pxh> commander land
 
 | Senaryo | Etiket `type` | Enjeksiyon | Geri alma | Not |
 |---|---|---|---|---|
-| GPS kaybı | `gps` | `failure gps off` | `failure gps ok` | En güvenilir SITL senaryosu. Araç failsafe'e geçebilir (`COM_POS_FS_*`). |
+| GPS kaybı | `gps` | `failure gps off` | `failure gps ok` | En güvenilir SITL senaryosu. GPS **verisi tamamen kesilir** (fix_type 0'a düşmez, son örnek 3D fix kalır); ~5 s sonra failsafe ("blind land") gelir. |
 | Motor arızası | `motors` (ve muhtemelen `attitude`) | `failure motor off -i 1` | – | Quad'da tek motor kaybı genelde düşüş demektir; sürümünde varsa hexa/octa bir SITL modeli daha anlamlı veri verir. Bazı sürümlerde `CA_FAILURE_MODE` gerekir. |
 | Batarya düşüşü | `battery` | `param set SIM_BAT_DRAIN 60` (kalkıştan önce) ve `param set SIM_BAT_MIN_PCT 5` | – | Batarya ~60 s'de boşalır; `BAT_LOW_THR`/`BAT_CRIT_THR` geçişleri failsafe üretir. Etiket aralığı: voltajın / `remaining`'in eşik altına indiği andan uçuş sonuna kadar. |
 | Yüksek titreşim | `vibration` | `failure accel intermittent` veya `failure accel garbage` | `failure accel ok` | **Gerçek titreşimi temsil etmez**: SITL'de mekanik titreşim yok, bu komutlar sensörü bozar ve EKF'yi düşürebilir. PX4 titreşim eşikleri zaten gerçek loglarla kalibre ediliyor (`eval/calibrate_vibration.py`); titreşim için gerçek uçuş loglarını tercih et. |

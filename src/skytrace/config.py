@@ -75,6 +75,7 @@ class GpsDetectorConfig:
     max_eph_m: float
     max_hdop: float
     min_duration_s: float
+    max_data_gap_s: float
 
 
 @dataclass(frozen=True)

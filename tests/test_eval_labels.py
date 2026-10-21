@@ -130,6 +130,6 @@ def test_run_eval_end_to_end(tmp_path):
         ["--labels", str(labels), "--logs", str(logs), "--out", str(out), "--config", str(cfg_path)]
     )
     assert rc == 0
-    text = out.read_text()
+    text = out.read_text(encoding="utf-8")
     assert "| gps | 1 | 1 |" in text
     assert "orphan.yaml" in text

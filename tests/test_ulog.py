@@ -325,3 +325,44 @@ def test_vibration_without_imu_status(monkeypatch):
     log = _parse_fake(monkeypatch, _fake_ulog([acc]))
     assert log.metadata.vib_metric_source is None
     assert log.vibration[["accel_vib_metric", "gyro_vib_metric", "clip_count"]].isna().all().all()
+
+
+def test_gnss_topics_with_nested_receiver_fields(monkeypatch):
+    # PX4 main renamed vehicle_gps_position -> vehicle_gnss and nests receiver fields.
+    gnss = _topic(
+        "vehicle_gnss",
+        {
+            "timestamp": _ts(0, 1),
+            "receiver.fix_type": [3, 3],
+            "receiver.satellites_used": [10, 9],
+            "receiver.eph": [0.9, 1.1],
+            "receiver.hdop": [0.7, 0.8],
+            "receiver.latitude": [47.3979, 47.3980],
+            "receiver.longitude": [8.5461, 8.5462],
+            "receiver.altitude_msl": [488.2, 489.0],
+        },
+    )
+    log = _parse_fake(monkeypatch, _fake_ulog([gnss]))
+    assert log.gps["lat"].tolist() == [47.3979, 47.3980]
+    assert log.gps["alt"].tolist() == [488.2, 489.0]
+    assert log.gps["satellites"].tolist() == [10.0, 9.0]
+    assert not any(w.startswith("gps:") for w in log.warnings)
+
+
+def test_sensor_gnss_fallback(monkeypatch):
+    gnss = _topic(
+        "sensor_gnss",
+        {
+            "timestamp": _ts(0),
+            "fix_type": [3],
+            "satellites_used": [12],
+            "eph": [0.8],
+            "hdop": [0.6],
+            "latitude": [41.0],
+            "longitude": [29.0],
+            "altitude_msl": [120.5],
+        },
+    )
+    log = _parse_fake(monkeypatch, _fake_ulog([gnss]))
+    assert log.gps["lat"].iloc[0] == 41.0
+    assert log.gps["alt"].iloc[0] == 120.5
