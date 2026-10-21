@@ -83,6 +83,24 @@ def evidence_for(log: FlightLog, finding: Finding, cfg: SkyTraceConfig) -> Evide
     ) -> Evidence:
         return Evidence(title, y_label, tuple(traces), threshold, label, win)
 
+    if det == "ml_anomaly" and ":" in metric:
+        # zscore:<signal> / iforest:<most deviating signal>: plot that signal itself.
+        # The threshold is a z-score / anomaly score, not a level of it: no line.
+        from skytrace.anomaly.ml import SIGNAL_LABELS, signal_series
+
+        signal = metric.split(":", 1)[1]
+        series = signal_series(log, signal) if signal in SIGNAL_LABELS else None
+        if series is None:
+            return None
+        t, y = series
+        method = "Rolling z-score" if metric.startswith("zscore:") else "Isolation Forest"
+        return make(
+            f"{method} anomaly: {SIGNAL_LABELS[signal]}",
+            SIGNAL_LABELS[signal],
+            [_trace(signal, t, y, win, cfg)],
+            None,
+            "",
+        )
     if det == "vibration" and metric == "accel_vib_metric":
         t, y = col("vibration", "accel_vib_metric")
         source = log.metadata.vib_metric_source or "unknown source"

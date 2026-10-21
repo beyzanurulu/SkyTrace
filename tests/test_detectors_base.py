@@ -146,3 +146,18 @@ def test_active_intervals_follow_arm_disarm():
 def test_active_intervals_log_starting_armed_and_no_events():
     assert active_intervals(_log_with_events((10.0, "disarm", "disarmed")), True) == [(0.0, 10.0)]
     assert active_intervals(_log_with_events(), True) == [(0.0, 60.0)]
+
+
+def test_airborne_and_flight_intervals():
+    from skytrace.detectors.base import airborne_intervals, flight_intervals
+
+    log = _log_with_events(
+        (5.0, "arm", "armed"), (12.0, "takeoff", "t"), (40.0, "landing", "l"), (45.0, "disarm", "d")
+    )
+    assert airborne_intervals(log) == [(12.0, 40.0)]
+    assert flight_intervals(log, True) == [(12.0, 40.0)]
+    no_air = _log_with_events((5.0, "arm", "armed"), (45.0, "disarm", "d"))
+    assert airborne_intervals(no_air) is None
+    assert flight_intervals(no_air, True) == [(5.0, 45.0)]  # fallback: armed
+    started_flying = _log_with_events((30.0, "landing", "l"))
+    assert airborne_intervals(started_flying) == [(0.0, 30.0)]

@@ -120,6 +120,45 @@ def active_intervals(log: FlightLog, only_when_armed: bool) -> list[tuple[float,
     return out
 
 
+def airborne_intervals(log: FlightLog) -> list[tuple[float, float]] | None:
+    """In-air periods from takeoff / landing events; ``None`` if the log has none.
+
+    A log whose first such event is a landing was already flying at the start;
+    a takeoff without a later landing stays airborne until the log ends.
+    """
+    ev = log.events[log.events["kind"].isin(["takeoff", "landing"])]
+    if ev.empty:
+        return None
+    start, end = min(0.0, _first_time(log)), log_end(log)
+    out: list[tuple[float, float]] = []
+    flying_since: float | None = start if ev["kind"].iloc[0] == "landing" else None
+    for t, kind in zip(ev["t"].to_numpy(dtype=np.float64), ev["kind"], strict=True):
+        if kind == "takeoff" and flying_since is None:
+            flying_since = float(t)
+        elif kind == "landing" and flying_since is not None:
+            out.append((flying_since, float(t)))
+            flying_since = None
+    if flying_since is not None:
+        out.append((flying_since, end))
+    return out
+
+
+def flight_intervals(log: FlightLog, only_when_armed: bool) -> list[tuple[float, float]]:
+    """Active periods that are also airborne; just the active periods without
+    takeoff / landing events (older logs, parsers without a land detector)."""
+    active = active_intervals(log, only_when_armed)
+    air = airborne_intervals(log)
+    if air is None:
+        return active
+    out = []
+    for a0, a1 in active:
+        for b0, b1 in air:
+            lo, hi = max(a0, b0), min(a1, b1)
+            if hi > lo:
+                out.append((lo, hi))
+    return out
+
+
 def _first_time(log: FlightLog) -> float:
     starts = [
         float(log.table(n)["t"].min())

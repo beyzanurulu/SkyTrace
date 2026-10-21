@@ -51,7 +51,7 @@ TABLE_NAMES: Final[tuple[str, ...]] = (
 )
 
 EVENT_KINDS: Final[frozenset[str]] = frozenset(
-    {"mode", "arm", "disarm", "failsafe", "error", "warning", "info"}
+    {"mode", "arm", "disarm", "takeoff", "landing", "failsafe", "error", "warning", "info"}
 )
 
 

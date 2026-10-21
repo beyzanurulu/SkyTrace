@@ -44,6 +44,9 @@ WANTED: Final[tuple[str, ...]] = (
 # EV ids for arming (AP_Logger LogEvent).
 _EV_ARMED: Final = 10
 _EV_DISARMED: Final = 11
+# Airborne state changes (LAND_COMPLETE_MAYBE = 17 is not final, so it is ignored).
+_EV_LAND_COMPLETE: Final = 18
+_EV_NOT_LANDED: Final = 28
 
 # ERR Subsys ids (Copter LogErrorSubsystem). Names starting with FAILSAFE_ become failsafe events.
 ERR_SUBSYSTEMS: Final[dict[int, str]] = {
@@ -380,6 +383,15 @@ def _events(msgs: _Messages, vehicle_type: str | None, warnings: list[str]) -> p
                 rows.append((float(t), "disarm", "disarmed"))
     else:
         warnings.append("events: no ARM / EV messages, no arm/disarm events")
+
+    if ev is not None:
+        for t, ev_id in zip(ev["t"].tolist(), ev["Id"].tolist(), strict=True):
+            if ev_id == _EV_NOT_LANDED:
+                rows.append((float(t), "takeoff", "takeoff (EV NOT_LANDED)"))
+            elif ev_id == _EV_LAND_COMPLETE:
+                rows.append((float(t), "landing", "landing (EV LAND_COMPLETE)"))
+    else:
+        warnings.append("events: no EV messages, no takeoff/landing events")
 
     err = msgs.get("ERR")
     if err is not None:

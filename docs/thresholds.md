@@ -47,7 +47,7 @@ Unknown keys are rejected so a typo does not silently fall back to the default.
 - Angles are in radians. The attitude setpoint is taken from `q_d` when present, otherwise from `roll_body`/`pitch_body`/`yaw_body`.
 - `motors` uses `actuator_motors` (already 0–1) when available, otherwise normalizes `actuator_outputs` (PWM) to 0–1. Values are clipped to [0, 1]. DShot outputs are not handled yet.
 - `vibration` columns: `vib_x/y/z` (informational), `accel_vib_metric`, `gyro_vib_metric` and `clip_count` (cumulative). With several IMUs the value at each time step is the maximum over instances (the worst IMU). See the vibration source table below.
-- Event kinds are `mode`, `arm`, `disarm`, `failsafe`, `error` (log level ≤ ERR), `warning` and `info`.
+- Event kinds are `mode`, `arm`, `disarm`, `takeoff`, `landing`, `failsafe`, `error` (log level ≤ ERR), `warning` and `info`. `takeoff` / `landing` come from PX4's land detector (`vehicle_land_detected.landed`) and ArduPilot's `EV` NOT_LANDED (28) / LAND_COMPLETE (18).
 
 ## `detectors`
 
@@ -108,3 +108,47 @@ Vibration metric sources (`LogMetadata.vib_metric_source`):
 |---|---|---|---|
 | `evidence_padding_s` | `10.0` | s | Context shown on each side of a finding's interval in its evidence plot. |
 | `max_points_per_trace` | `4000` | points | Long series are reduced to at most this many points per trace. Each bucket keeps its minimum and maximum, so short peaks stay visible. |
+
+## `anomaly` (ML anomaly detection, step 8)
+
+Off by default: `run_detectors(log, ml=True)`, `skytrace analyze --ml`,
+`eval/run_eval.py --ml`. Unsupervised and per log (`skytrace.anomaly.ml`); findings
+use `detector = "ml_anomaly"`. ML findings that overlap a rule finding are dropped
+and listed in `notes`, so a fault is reported once, by the rule that explains it.
+The four alarm thresholds (`zscore.info` / `warn`, `iforest.min_feature_z` /
+`warn_feature_z`) are **calibrated by false-alarm rate on clean real flights**
+(`eval/calibrate_ml.py`, `eval/results/ml_calibration.{json,png}`): P80 / P95 of
+the per-log statistic over 28 clean PX4 quadrotor flights, checked on 31 others.
+There are no labels for unknown anomalies, so recall is not measured. The other
+values are heuristic.
+
+How the data is prepared:
+
+- Armed, in-air periods (between `takeoff` and `landing` events; armed periods if a
+  log has none) are split at flight-mode changes and every mode is analysed on its own, so a climb in takeoff or a descent in land is not
+  compared with hover.
+- `trim_s` seconds after the start and before the end of each segment are skipped
+  (motor spin-up, touchdown, mode-switch transients).
+- Signals are binned onto a `resample_hz` grid; gaps up to `max_fill_s` are
+  forward-filled (1 Hz status topics).
+
+| Key | Default | Unit | Meaning |
+|---|---|---|---|
+| `resample_hz` | `10.0` | Hz | Common grid for all signals. |
+| `max_fill_s` | `2.0` | s | Forward-fill limit for slow topics. `0` is allowed. |
+| `trim_s` | `5.0` | s | Skipped at both ends of each in-air single-mode segment (lift-off, touchdown, mode switches). `0` is allowed. |
+| `signals.<name>` | see `defaults.yaml` | signal units | Noise floor per signal; `null` disables the signal. Signals: `roll_error_deg`, `pitch_error_deg`, `accel_vib_metric`, `battery_voltage`, `battery_current`, `motor_mean`, `motor_spread` (only with a known motor count), `vz`, `gps_eph` (only with a 3D fix). |
+| **zscore** | | | Robust z = (x − trailing rolling median) / max(1.4826 × rolling MAD, noise floor). A trailing window flags an onset when it happens. |
+| `window_s` | `30.0` | s | Rolling window. |
+| `info` / `warn` | `13.3` / `25.0` | robust z | **Calibrated**: on the test flights info fired on 19 %, warn on 10 % (targets 20 % / 5 %). \|z\| above `info` for `min_duration_s` → `info` finding; above `warn` anywhere inside → `warn`. |
+| `min_duration_s` | `1.0` | s | |
+| **iforest** | | | One Isolation Forest per flight mode, on sliding windows. Features per signal: level (window mean minus the median of window means within `baseline_s`, so slow trends such as battery discharge do not count), std, slope, and the share of spectral energy above `hf_cutoff_hz`. The share is 0 when the window varies less than the signal's noise floor. |
+| `enabled` | `false` | – | **Off by default**: after calibration it still flagged about a third of clean real flights (normal manoeuvres look anomalous). `--ml` then runs the rolling z-score only. Set `true` to try the forest. |
+| `window_s` / `step_s` | `5.0` / `2.5` | s | Window length and step. |
+| `baseline_s` | `60.0` | s | Span of neighbouring windows for the level feature. Windows without enough neighbours on both sides get a neutral level. |
+| `hf_cutoff_hz` | `1.0` | Hz | Must be below `resample_hz / 2`. |
+| `n_estimators` / `contamination` / `random_state` | `200` / `0.02` / `0` | – | scikit-learn parameters. The fixed seed makes results reproducible. |
+| `min_windows` | `20` | windows | Modes with fewer windows are skipped and listed in a note. |
+| `min_feature_z` | `59.7` | robust z | **Calibrated** (P80). Generalises poorly: info on 32 % of the test flights; real-flight variability alone reaches \|z\| 30-150. A window flagged by the forest is reported only if one feature deviates at least this much (feature vs. median / IQR of all windows of that mode). `contamination` alone flags some windows in every log, and the forest's score is a weak gate because adjacent anomalous windows mask each other. |
+| `warn_feature_z` | `91.1` | robust z | **Calibrated** (P95); warn on 13 % of the test flights. |
+| `top_features` | `3` | – | Most deviating features named in the summary. |

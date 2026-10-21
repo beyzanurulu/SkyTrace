@@ -1,0 +1,780 @@
+{
+  "date": "2026-10-21",
+  "rule": "info = P80, warn = P95 of per-log statistics on the clean calibration half (split by vehicle_uuid)",
+  "thresholds": {
+    "zscore": {
+      "info": 13.330953003308244,
+      "warn": 25.03172448945791
+    },
+    "iforest": {
+      "info": 59.70288486242351,
+      "warn": 91.08750463568472
+    }
+  },
+  "false_alarm_rates": {
+    "zscore": {
+      "clean_calibration_info": 0.21428571428571427,
+      "clean_calibration_warn": 0.07142857142857142,
+      "clean_test_info": 0.1935483870967742,
+      "clean_test_warn": 0.0967741935483871,
+      "vibration_info": 0.21875,
+      "vibration_warn": 0.15625
+    },
+    "iforest": {
+      "clean_calibration_info": 0.21428571428571427,
+      "clean_calibration_warn": 0.07142857142857142,
+      "clean_test_info": 0.3225806451612903,
+      "clean_test_warn": 0.12903225806451613,
+      "vibration_info": 0.25,
+      "vibration_warn": 0.0625
+    }
+  },
+  "logs": [
+    {
+      "log_id": "0b1a730d-147b-47e3-b25e-c56fe27dacf8",
+      "vehicle": "000200000000203331354e30500200340041",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 4.321020081735563,
+      "iforest_stat": 2.6216673009815246
+    },
+    {
+      "log_id": "108e5729-67b7-4d93-ae8e-ff0f5df5a63c",
+      "vehicle": "00020000000020323441425650050035001e",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 1.0791851186704986,
+      "iforest_stat": 91.11111111111111
+    },
+    {
+      "log_id": "20877cb1-6949-4813-8e25-30ce7d3a8d48",
+      "vehicle": "00060000000033303938313051180024003d",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 3.7444849300551706,
+      "iforest_stat": 67.85969452945817
+    },
+    {
+      "log_id": "2527859c-b5d6-4c5e-84ed-7008a47996bc",
+      "vehicle": "000100000000373538323337510f002c0046",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 15.791880935430527,
+      "iforest_stat": 67.44881267570653
+    },
+    {
+      "log_id": "294b2c72-b579-45a2-94e3-2bc717fff369",
+      "vehicle": "000200000000393035353438510a00430039",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 53.72741797629401,
+      "iforest_stat": 55.32246493022365
+    },
+    {
+      "log_id": "2eb639d6-3086-4425-a241-003bcf67be91",
+      "vehicle": "0001000000003132343035335109003b001a",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 1.913732725641002,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "3ab963b7-a4dd-44b1-9b94-354478c9b055",
+      "vehicle": "000200000000203331354e30500500430034",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 25.416969667226088,
+      "iforest_stat": 53.89129496331962
+    },
+    {
+      "log_id": "3c450ddb-bf6a-4d41-a8fe-37c30f279841",
+      "vehicle": "00010000000020363450504850150036003d",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 9.34686029329896,
+      "iforest_stat": 59.93531041157724
+    },
+    {
+      "log_id": "3ffec0a8-dcf3-4dce-93cc-511dc45213ec",
+      "vehicle": "000600000000363538393330511100520029",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 9.72499966621399,
+      "iforest_stat": 42.52542363280663
+    },
+    {
+      "log_id": "47807400-fadd-4caf-92db-e8106b091eca",
+      "vehicle": "000600000000323034373130510d00500035",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 13.133077621459961,
+      "iforest_stat": 56.51685890539058
+    },
+    {
+      "log_id": "5b433058-6437-4fe8-853e-73315bcb2137",
+      "vehicle": "00060000000038363233313151030033003a",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 10.740451207192354,
+      "iforest_stat": 91.04366403846427
+    },
+    {
+      "log_id": "600b2333-60e1-4735-9777-f28b15280f62",
+      "vehicle": "000200000000393037363138510c001e0029",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 2.6259416807442904,
+      "iforest_stat": 57.51432411759507
+    },
+    {
+      "log_id": "6a10396a-5d41-4862-8d14-47a9bad00635",
+      "vehicle": "00060000000038363233313151030033003a",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 15.282582114450634,
+      "iforest_stat": 103.67110658725625
+    },
+    {
+      "log_id": "7137ba64-643b-4fc0-b207-b105a7163548",
+      "vehicle": "00060000000038363233313151030033003a",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 7.307046685018577,
+      "iforest_stat": 26.17572497058416
+    },
+    {
+      "log_id": "73241e19-b20d-4e6c-ae13-44d9029a3184",
+      "vehicle": "0002000000003332343035365111002c001f",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 2.575342042188422,
+      "iforest_stat": 10.539676752324656
+    },
+    {
+      "log_id": "76378231-96b3-4e93-abf6-67ad0e6a1531",
+      "vehicle": "00060000000038383435323351190036002b",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 1.0604095458984375,
+      "iforest_stat": 57.54052753435326
+    },
+    {
+      "log_id": "7c3d5d37-8af0-4a99-bac8-b5138ba52b31",
+      "vehicle": "0002000000003532363530385106001e0027",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 11.387499999999994,
+      "iforest_stat": 11.37371746485218
+    },
+    {
+      "log_id": "8fe99876-e636-4658-b071-bab29436a6a7",
+      "vehicle": "000600000000383033343430510d00380024",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 2.7923824320355424,
+      "iforest_stat": 3.261169008334866
+    },
+    {
+      "log_id": "90be82b6-e527-4684-aa13-e4489a9348f6",
+      "vehicle": "000600000000383033343430510d00380024",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 2.765600064764722,
+      "iforest_stat": 28.950379322363084
+    },
+    {
+      "log_id": "b9bb6b01-d140-4b78-9703-f66090b91b07",
+      "vehicle": "000200000000393037363138510c001e0029",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 1.3630337432743036,
+      "iforest_stat": 9.03882832693371
+    },
+    {
+      "log_id": "ba4ed394-eb7e-43e4-a0c2-1d7ae9918b35",
+      "vehicle": "00060000000032373835333251160042002b",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 6.750931788268534,
+      "iforest_stat": 52.08291185541311
+    },
+    {
+      "log_id": "ce57039d-0c26-4e8a-b987-e8d5f13b45b1",
+      "vehicle": "000200000000393037363138510c001e0029",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 6.59189282450825,
+      "iforest_stat": 43.23875338647155
+    },
+    {
+      "log_id": "d29b2bd7-62f7-4483-9991-12e57f46dc09",
+      "vehicle": "0002000000003332343035365111002c001f",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 6.249588375026777,
+      "iforest_stat": 59.35424653869291
+    },
+    {
+      "log_id": "d9764992-5fc3-4c3a-be26-a7746e6d5b3f",
+      "vehicle": "0002000000003839373831385106001e002c",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 13.462869924540431,
+      "iforest_stat": 32.52123711610058
+    },
+    {
+      "log_id": "e414f2e1-87cc-4802-8e9f-327049aef863",
+      "vehicle": "000600000000383033343430510d00380024",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 2.4670613756008586,
+      "iforest_stat": 2.6550234688575314
+    },
+    {
+      "log_id": "e67dc9b8-1721-4319-83b5-32acce70eea6",
+      "vehicle": "000200000000203331354e30500500430034",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 4.3268255624288585,
+      "iforest_stat": 4.985941815841704
+    },
+    {
+      "log_id": "ea7dbb45-c8f1-4a2d-96bc-023ff15b97c9",
+      "vehicle": "000200000000203331354e30500500430034",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 24.316269159317017,
+      "iforest_stat": 28.41002774333328
+    },
+    {
+      "log_id": "fd49c26a-d8d4-48c2-a47d-d5273730dbb4",
+      "vehicle": "0002000000003332343035365111002c001f",
+      "group": "clean",
+      "split": "calibration",
+      "zscore_stat": 8.195317001667787,
+      "iforest_stat": 57.33435582549761
+    },
+    {
+      "log_id": "01f55399-84d2-497a-8ed5-9a92abc9ac73",
+      "vehicle": "0001000000003535343830385114003b0043",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 15.18796438834154,
+      "iforest_stat": 71.94300634466879
+    },
+    {
+      "log_id": "13d1f0b9-85a4-41f2-a347-5ad8efe44088",
+      "vehicle": "0002000000003534363331385119001e0025",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 2.938069691949142,
+      "iforest_stat": 2.0813355176612816
+    },
+    {
+      "log_id": "184b1c7f-e875-4937-a12d-c7dfca8e70aa",
+      "vehicle": "000600000000383033343430510d0046002f",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 33.25411531329155,
+      "iforest_stat": 38.005472508398014
+    },
+    {
+      "log_id": "248ee89e-2fed-4cbb-aaa7-60dbf7efc592",
+      "vehicle": "000100000000203231354d31501500480021",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 7.107885557045116,
+      "iforest_stat": 7.521454894764231
+    },
+    {
+      "log_id": "26f27829-9a83-49ce-b177-4645d39deb72",
+      "vehicle": "00020000000035323635303851050027001e",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 3.2054935698397458,
+      "iforest_stat": 77.23592868626584
+    },
+    {
+      "log_id": "37ab8f32-e3a7-450e-90d8-753d759421a7",
+      "vehicle": "000200000000353338373138511600320037",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 11.658233667221491,
+      "iforest_stat": 3.584177483355032
+    },
+    {
+      "log_id": "48ed7bff-d92d-4c02-988e-84ccc4d5fec2",
+      "vehicle": "000200000000203331354e305004002c0044",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 6.561850449854019,
+      "iforest_stat": 78.48485322680618
+    },
+    {
+      "log_id": "4e836940-ec30-4086-9f87-6dc1ef586063",
+      "vehicle": "000200000000353338373138511600320037",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 81.64530152838917,
+      "iforest_stat": 36.31075033274945
+    },
+    {
+      "log_id": "50fac13b-cf22-4259-9dca-ceb6f916e17f",
+      "vehicle": "000200000000353236353038510600390042",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 1.9000384579929406,
+      "iforest_stat": 81.86292482887757
+    },
+    {
+      "log_id": "630e1da2-b755-465b-8d34-3545e40939bd",
+      "vehicle": "00060000000036383236333251050022002b",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 0.449718177318573,
+      "iforest_stat": 47.48564843032084
+    },
+    {
+      "log_id": "64e569a3-38dd-4d6a-bcdb-9487edb7aec8",
+      "vehicle": "000600000000383033343430510d0028002b",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 4.727327449998341,
+      "iforest_stat": 23.957635042796525
+    },
+    {
+      "log_id": "7428a7d5-cabd-48a0-80bb-b81c68791417",
+      "vehicle": "000100000000343937363235510400320032",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 6.528526277445158,
+      "iforest_stat": 12.129277641911205
+    },
+    {
+      "log_id": "87c1ccca-a4f4-4da0-94a1-a0ade11eded9",
+      "vehicle": "0006000000003235343331315103003a0036",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 3.499964028596878,
+      "iforest_stat": 69.29771939280162
+    },
+    {
+      "log_id": "93142163-4476-48a5-a572-cb7ce0003232",
+      "vehicle": "00030011ffffffffffff4e45591880100017",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 6.7984726688023756,
+      "iforest_stat": 35.86881624275246
+    },
+    {
+      "log_id": "965fe9b3-738d-4f61-bb0e-c7536d8a900d",
+      "vehicle": "00030011ffffffffffff4e45591880100017",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 3.3278889767825603,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "9ef004b8-85eb-4c69-8071-f681ded74273",
+      "vehicle": "0002000000003533383731385113003d002d",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 1.0709313523356214,
+      "iforest_stat": 8.842181186957337
+    },
+    {
+      "log_id": "9f7ca4b2-f8b0-4fab-b4e6-5cfb50d6571f",
+      "vehicle": "0001000000003535343830385114003b0043",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 15.18796438834154,
+      "iforest_stat": 71.94300634466879
+    },
+    {
+      "log_id": "abb52a62-487b-4cd7-8872-640bb5904554",
+      "vehicle": "0002000000003733333234385102001a002b",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 2.059990712441504,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "c54138a2-d64c-433b-b2c5-26849e2e5c3b",
+      "vehicle": "000200000000203830584356500d0036003f",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 5.485858860081705,
+      "iforest_stat": 57.473696648567966
+    },
+    {
+      "log_id": "cee9bbf1-0fad-46cf-bcd5-1c21f0e087b3",
+      "vehicle": "000200000000203335375942500f002b002e",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 18.9375,
+      "iforest_stat": 159.0609895806464
+    },
+    {
+      "log_id": "d01e2f7c-3585-41ce-a682-93f434fc6ea9",
+      "vehicle": "000200000000203830584356500d0036003f",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 2.619280042126775,
+      "iforest_stat": 129.35585223428382
+    },
+    {
+      "log_id": "d219affb-ce51-4900-8e40-9db78f2773b1",
+      "vehicle": "000200000000203335375942500f002b002e",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 10.362500000000002,
+      "iforest_stat": 57.534048481869256
+    },
+    {
+      "log_id": "d57b4c0c-174d-49bd-b46b-7040dcf540ca",
+      "vehicle": "00060000000036383236333251050022002b",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 51.34337407754016,
+      "iforest_stat": 48.30489466281913
+    },
+    {
+      "log_id": "e1bfab1b-771c-434e-903b-f4ab909d4855",
+      "vehicle": "000600000000383033343430510d0028002b",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 2.4781668282834084,
+      "iforest_stat": 37.69704142011834
+    },
+    {
+      "log_id": "e40fa4c0-4ffa-4e35-93fb-f0d2a3be1289",
+      "vehicle": "000200000000353338373138511600320037",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 11.658233667221491,
+      "iforest_stat": 3.584177483355032
+    },
+    {
+      "log_id": "e4dcc25d-f733-4ccf-87c6-d918274ee876",
+      "vehicle": "0002000000003534363331385119001e0025",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 10.63013703490753,
+      "iforest_stat": 2.7940047088900615
+    },
+    {
+      "log_id": "ea920cbb-55a9-4452-90a4-634d0c7f1d3f",
+      "vehicle": "000200000000203335375942500f002b002e",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 4.8352849287257404,
+      "iforest_stat": 94.3567648267263
+    },
+    {
+      "log_id": "ed9794aa-685b-4e9b-9d00-33d0fcd0eea7",
+      "vehicle": "000100000000303239353439511500210029",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 3.803327019935943,
+      "iforest_stat": 50.22875295714723
+    },
+    {
+      "log_id": "f8d9c55a-7ff5-4b92-8275-21f70983aeba",
+      "vehicle": "0002000000003534363331385119001e0025",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 1.9638118388115005,
+      "iforest_stat": 37.62273992628972
+    },
+    {
+      "log_id": "f9ee348a-a05e-4d48-9525-28c426a71e05",
+      "vehicle": "000100000000343937363235510400320032",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 5.201786282355296,
+      "iforest_stat": 125.7653901608402
+    },
+    {
+      "log_id": "fbc60f2c-2464-4577-bcfc-201e7362ebdc",
+      "vehicle": "000200000000203830584356500d0036003f",
+      "group": "clean",
+      "split": "test",
+      "zscore_stat": 4.44252245593816,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "11ee8e71-20d6-4ef3-bd34-aa960f2210b9",
+      "vehicle": "000600000000303935343034510100360021",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 3.9669968100975503,
+      "iforest_stat": 35.83406233821419
+    },
+    {
+      "log_id": "11f15743-57eb-4faa-9053-3d7e8d2f5836",
+      "vehicle": "0006000000003636333834335111003b0023",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 2.875859333486686,
+      "iforest_stat": 76.82287670977252
+    },
+    {
+      "log_id": "1960f7a6-8ec8-42e8-bea1-8deda612670a",
+      "vehicle": "0002000000003632363530335108002d001c",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 1.1482566453987724,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "236a76d4-17b4-4714-a497-5cf3596b4706",
+      "vehicle": "0002000000003233353732335103002a0023",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 30.3615548585726,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "24462c02-9a9e-454a-84b6-73d071a8c2a2",
+      "vehicle": "000600000000343739383031510a002e001f",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 3.1414049991027513,
+      "iforest_stat": 7.182095350950844
+    },
+    {
+      "log_id": "25cf977e-ee05-4aa2-b740-817d94a033c0",
+      "vehicle": "000600000000393337383333510e0032003b",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 43.56329405463516,
+      "iforest_stat": 96.6947810640019
+    },
+    {
+      "log_id": "26816fe7-a724-4457-8bc0-939781b6d06b",
+      "vehicle": "0006000000003037363035325111004e0039",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 6.835745613502395,
+      "iforest_stat": 3.8288105053081556
+    },
+    {
+      "log_id": "37af509d-b89a-488b-8a86-7f19092d83db",
+      "vehicle": "00060000000038303334343051060052002c",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 1.76099605788048,
+      "iforest_stat": 6.7436941427523545
+    },
+    {
+      "log_id": "396803a1-ae29-4482-8db6-e734760c861c",
+      "vehicle": "000600000000373335373433510d002a0026",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 1.7772558415230428,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "41379ca5-f813-4039-9ada-3a3ec66bc15e",
+      "vehicle": "000600000000393037363333510f003c0025",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 9.241553328634245,
+      "iforest_stat": 22.276848045289775
+    },
+    {
+      "log_id": "43e79287-15ae-4a09-b0df-927646564741",
+      "vehicle": "000600000000353438323233510d002f0018",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 3.2563529044248947,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "5fd20a53-bbb3-4a37-928e-a61b9fad3b38",
+      "vehicle": "0006000000003933373833335111002c001f",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 3.9398384172316008,
+      "iforest_stat": 2.4561626325307273
+    },
+    {
+      "log_id": "63356431-1d69-4c9c-ac1b-68348c5ef5ae",
+      "vehicle": "000600000000373838343434510a002f0044",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 18.685914034117,
+      "iforest_stat": 41.58461734827662
+    },
+    {
+      "log_id": "6e33cf73-8039-47e1-8ba9-bc846453bd18",
+      "vehicle": "000600000000393439333033510400460034",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 3.2594180610357157,
+      "iforest_stat": 40.51582549002877
+    },
+    {
+      "log_id": "70e060db-6b5c-4882-ae57-256c2ebe6195",
+      "vehicle": "000600000000313736383433510400380016",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 5.774669647216797,
+      "iforest_stat": 43.70295280313949
+    },
+    {
+      "log_id": "7be66c6d-de3e-42f9-ae75-10000d90969c",
+      "vehicle": "000200000000373735373233510f00250019",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 1.5778580494225025,
+      "iforest_stat": 74.23361131692728
+    },
+    {
+      "log_id": "7d17873d-0333-445c-abb9-0e70c9d530cd",
+      "vehicle": "0006000000003432373135335116003a0048",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 2.7967669100596986,
+      "iforest_stat": 88.8892496385176
+    },
+    {
+      "log_id": "7d4f5767-835b-4897-a89a-e5dd3489e7eb",
+      "vehicle": "000600000000393438313230510c00170035",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 170.5050374710848,
+      "iforest_stat": 94.77751374117712
+    },
+    {
+      "log_id": "87c71fe7-1528-41c1-b1d7-a5da63613ff0",
+      "vehicle": "000600000000383236313533511400350017",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 0.0,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "89cedb06-6b69-4afc-983b-854cc6a9335f",
+      "vehicle": "000100000000333639333138510d0048003e",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 101.89795717100303,
+      "iforest_stat": 83.59672570681764
+    },
+    {
+      "log_id": "8d51bf1d-d461-415b-8ea2-6609d42c789f",
+      "vehicle": "00020000000035333837313851180032001f",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 38.004257902503014,
+      "iforest_stat": 64.85260352309356
+    },
+    {
+      "log_id": "9163bb38-362e-490b-9642-d97ad5711253",
+      "vehicle": "000600000000313437393034511600440046",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 1.7626304858660773,
+      "iforest_stat": 1.9596896916452962
+    },
+    {
+      "log_id": "9e7bc6df-08b2-4d83-b53e-a102f67f33a9",
+      "vehicle": "000600000000383033343430510900440048",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 5.205607350325456,
+      "iforest_stat": 50.94471869339581
+    },
+    {
+      "log_id": "a806c7f8-8530-47ed-8485-f8ca595d775d",
+      "vehicle": "log:a806c7f8-8530-47ed-8485-f8ca595d775d",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 0.08330699056386948,
+      "iforest_stat": 48.05321438969337
+    },
+    {
+      "log_id": "a993ec79-38a4-44f5-8a52-4663ea75e354",
+      "vehicle": "000600000000323632353333510c0030003c",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 1.1316819820920203,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "b5830d48-3260-4b94-ada0-e9375fe0e4dd",
+      "vehicle": "log:b5830d48-3260-4b94-ada0-e9375fe0e4dd",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 0.5782580689246504,
+      "iforest_stat": 46.957427527495575
+    },
+    {
+      "log_id": "e1fee8c7-f3f4-43cf-aa1a-773206fdffa2",
+      "vehicle": "000600000000323339343434510c0026003d",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 6.396844727604132,
+      "iforest_stat": 0.0
+    },
+    {
+      "log_id": "e35048da-3864-44a9-b9f1-9f4520d8ca94",
+      "vehicle": "000600000000353236313333510800240048",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 6.149238906800747,
+      "iforest_stat": 85.44827938995745
+    },
+    {
+      "log_id": "f1c82a01-2e59-4036-bd00-cae5056e96d1",
+      "vehicle": "000600000000343237313533510300260032",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 13.901446396484971,
+      "iforest_stat": 23.48309650539672
+    },
+    {
+      "log_id": "ff7beed9-a5d4-415d-b123-5b06315f5c8b",
+      "vehicle": "000600000000363435363333511800400047",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 1.3055120075450226,
+      "iforest_stat": 4.1026782996368105
+    },
+    {
+      "log_id": "ff7e3458-4a2a-4209-861e-8e2ef6c56d0c",
+      "vehicle": "00060000000034383232353351130025003c",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 1.408171840264948,
+      "iforest_stat": 55.70860145311556
+    },
+    {
+      "log_id": "ffebcc39-f84a-473d-8df8-9be156713cdf",
+      "vehicle": "00060000000033383936303351010044001c",
+      "group": "vibration",
+      "split": "",
+      "zscore_stat": 2.6136516929718066,
+      "iforest_stat": 3.1100959794635044
+    }
+  ],
+  "skipped": [
+    {
+      "log_id": "95f0beb7-e5c8-4a8c-b159-c0acf51abc55",
+      "reason": "simulation (SITL / HITL / SIH)"
+    },
+    {
+      "log_id": "999a88df-6ea4-4d06-9625-98e24dddf96d",
+      "reason": "simulation (SITL / HITL / SIH)"
+    },
+    {
+      "log_id": "d6ab45d6-5f3f-433d-aa29-07bbf94e39aa",
+      "reason": "no in-air armed data"
+    },
+    {
+      "log_id": "e4728d43-d601-421b-b99d-ca36b772459a",
+      "reason": "simulation (SITL / HITL / SIH)"
+    }
+  ]
+}

@@ -128,10 +128,64 @@ class ReportConfig:
 
 
 @dataclass(frozen=True)
+class AnomalySignalsConfig:
+    """Signals for ML anomaly detection, each with its noise floor (signal units).
+
+    The robust z-score divides by max(1.4826 * MAD, floor), so a nearly constant
+    signal cannot turn measurement noise into a huge score. ``None`` disables it.
+    """
+
+    roll_error_deg: float | None
+    pitch_error_deg: float | None
+    accel_vib_metric: float | None
+    battery_voltage: float | None
+    battery_current: float | None
+    motor_mean: float | None
+    motor_spread: float | None
+    vz: float | None
+    gps_eph: float | None
+
+
+@dataclass(frozen=True)
+class ZScoreConfig:
+    window_s: float
+    info: float
+    warn: float
+    min_duration_s: float
+
+
+@dataclass(frozen=True)
+class IsolationForestConfig:
+    enabled: bool
+    window_s: float
+    step_s: float
+    baseline_s: float
+    hf_cutoff_hz: float
+    n_estimators: int
+    contamination: float
+    random_state: int = field(metadata=_ZERO_OK)
+    min_windows: int
+    min_feature_z: float
+    warn_feature_z: float
+    top_features: int
+
+
+@dataclass(frozen=True)
+class AnomalyConfig:
+    resample_hz: float
+    max_fill_s: float = field(metadata=_ZERO_OK)
+    trim_s: float = field(metadata=_ZERO_OK)
+    signals: AnomalySignalsConfig
+    zscore: ZScoreConfig
+    iforest: IsolationForestConfig
+
+
+@dataclass(frozen=True)
 class SkyTraceConfig:
     parser: ParserConfig
     detectors: DetectorsConfig
     report: ReportConfig
+    anomaly: AnomalyConfig
 
 
 T = TypeVar("T")
@@ -206,6 +260,17 @@ def _build(cls: type[T], data: dict[str, Any], path: str = "") -> T:
 
 def _check(cfg: SkyTraceConfig) -> None:
     """Cross-field constraints that a per-field type check cannot express."""
+    a = cfg.anomaly
+    if a.zscore.warn < a.zscore.info:
+        raise ConfigError("anomaly.zscore: warn must be >= info")
+    if a.iforest.warn_feature_z < a.iforest.min_feature_z:
+        raise ConfigError("anomaly.iforest: warn_feature_z must be >= min_feature_z")
+    if not 0 < a.iforest.contamination <= 0.5:
+        raise ConfigError("anomaly.iforest.contamination must be in (0, 0.5]")
+    if a.iforest.step_s > a.iforest.window_s:
+        raise ConfigError("anomaly.iforest.step_s must be <= window_s")
+    if a.iforest.hf_cutoff_hz >= a.resample_hz / 2:
+        raise ConfigError("anomaly.iforest.hf_cutoff_hz must be below resample_hz / 2 (Nyquist)")
     m = cfg.parser.motors
     if m.pwm_max_us <= m.pwm_min_us:
         raise ConfigError("parser.motors.pwm_max_us must be greater than pwm_min_us")

@@ -115,3 +115,71 @@ report:
   # Long series are reduced to at most this many points per trace (min/max per
   # bucket, so short peaks survive). Keeps 50 MB logs from producing huge reports.
   max_points_per_trace: 4000
+
+anomaly:
+  # ML anomaly detection (skytrace.anomaly.ml), off by default: run_detectors(ml=True)
+  # or `skytrace analyze --ml`. Unsupervised within one log, no training data.
+  # zscore.info/warn and iforest.min_feature_z/warn_feature_z are calibrated on
+  # clean real flights (see their comments); the rest are heuristic.
+  # Armed samples are binned onto a common grid at this rate (Hz) ...
+  resample_hz: 10.0
+  # ... and gaps up to this long (s) are forward-filled (1 Hz status topics).
+  max_fill_s: 2.0
+  # Analysis covers armed, in-air time (takeoff / landing events), split at mode
+  # changes; this long (s) is skipped at both ends of each segment (lift-off,
+  # touchdown, mode-switch transients).
+  trim_s: 5.0
+
+  # Signal -> noise floor (signal units) for the robust z-score; null disables it.
+  signals:
+    roll_error_deg: 1.0     # |roll setpoint - roll| (deg)
+    pitch_error_deg: 1.0
+    accel_vib_metric: 0.5   # vibration metric (source units)
+    battery_voltage: 0.05   # V
+    battery_current: 0.5    # A
+    motor_mean: 0.02        # mean normalized motor output
+    motor_spread: 0.02      # max - min motor output
+    vz: 0.2                 # vertical velocity (m/s)
+    gps_eph: 0.2            # m, only while the GPS fix is valid
+
+  zscore:
+    # Robust z = (x - rolling median) / max(1.4826 * rolling MAD, noise floor),
+    # over the trailing window_s seconds (past only: an onset is flagged when it
+    # happens, not one window earlier).
+    window_s: 30.0
+    # Calibrated 2026-10-21 with eval/calibrate_ml.py (eval/results/ml_calibration.json):
+    # P80 / P95 of the per-log max sustained |z| over 28 clean real PX4 quadrotor
+    # flights (Flight Review, no error label, rated good/great; SITL/HITL excluded),
+    # split by vehicle_uuid. Test half (31 flights): info on 19 %, warn on 10 %.
+    info: 13.3              # |z| above this for min_duration_s -> info finding
+    warn: 25.0              # ... and above this anywhere inside -> warn
+    min_duration_s: 1.0
+
+  iforest:
+    # Off by default: calibrated on clean real flights it still fired on 32 % of
+    # the test flights (see min_feature_z below), i.e. normal manoeuvres look
+    # anomalous. The rolling z-score above stays on. Set true to try it.
+    enabled: false
+    # Isolation Forest, one per flight mode, on sliding windows. Features per
+    # signal: level (window mean minus the median of the window means within
+    # +-baseline_s / 2, so slow trends like battery discharge are not anomalies),
+    # std, slope and the share of spectral energy above hf_cutoff_hz.
+    window_s: 5.0
+    step_s: 2.5
+    baseline_s: 60.0
+    hf_cutoff_hz: 1.0
+    n_estimators: 200
+    contamination: 0.02     # expected share of anomalous windows in a log
+    random_state: 0         # fixed: the same log always gives the same result
+    min_windows: 20         # fewer windows than this -> skipped (note)
+    # contamination alone flags the most extreme windows of *every* log, and the
+    # forest's score is a weak gate (adjacent anomalous windows mask each other).
+    # So a window is only reported if its most deviating feature has a robust z
+    # (vs. the median / IQR of all windows of that mode) of at least min_feature_z.
+    # Calibrated 2026-10-21 with eval/calibrate_ml.py: P80 / P95 of the per-log max
+    # feature |z| of flagged windows over the same 28 clean flights. Generalises
+    # poorly: on the 31 test flights info fires on 32 %, warn on 13 % (targets
+    # 20 % / 5 %), because real-flight variability already yields |z| ~ 30-150.
+    min_feature_z: 59.7
+    warn_feature_z: 91.1    # ... and from this |z| on the finding is a warning
+    top_features: 3         # most deviating features named in the summary

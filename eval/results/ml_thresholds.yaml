@@ -1,0 +1,8 @@
+# Calibrated 2026-10-21 with eval/calibrate_ml.py (eval/results/ml_calibration.json).
+# info = P80, warn = P95 of per-log statistics on the clean calibration half (split by vehicle_uuid); 28 calibration / 31 test clean real flights.
+# zscore: test-half false alarms info 19%, warn 10%
+zscore.info: 13.3
+zscore.warn: 25.0
+# iforest: test-half false alarms info 32%, warn 13%
+iforest.min_feature_z: 59.7
+iforest.warn_feature_z: 91.1

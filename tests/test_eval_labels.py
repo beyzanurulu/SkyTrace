@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -23,6 +24,8 @@ def _run_eval_module():
     spec = importlib.util.spec_from_file_location("run_eval", ROOT / "eval" / "run_eval.py")
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
+    # dataclasses resolve string annotations through sys.modules[cls.__module__]
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -119,7 +122,7 @@ def test_run_eval_end_to_end(tmp_path):
     cfg_path.write_text("detectors:\n  battery:\n    cells: 4\n")
 
     mod = _run_eval_module()
-    matches, skipped = mod.evaluate(labels, logs, override(battery={"cells": 4}), 0.3, "warn")
+    matches, skipped, _ml = mod.evaluate(labels, logs, override(battery={"cells": 4}), 0.3, "warn")
     assert [m.log_id for m in matches] == ["clean", "gpsfail"]
     assert skipped == [f"orphan.yaml: log not found in {logs}"]
     gps = total_counts(matches)["gps"]
@@ -133,3 +136,31 @@ def test_run_eval_end_to_end(tmp_path):
     text = out.read_text(encoding="utf-8")
     assert "| gps | 1 | 1 |" in text
     assert "orphan.yaml" in text
+
+
+def test_ml_section_counts_where_ml_findings_fall():
+    mod = _run_eval_module()
+    labels_faulty = mod.LogLabels("g1", [FaultLabel("gps", 10.0, 20.0)])
+    labels_clean = mod.LogLabels("c1", [])
+    ml = "ml_anomaly"
+    rows = [
+        mod.ml_row(
+            labels_faulty,
+            [
+                Finding(ml, "info", 12, 14, "zscore:vz", 9, 8, "a"),
+                Finding(ml, "info", 40, 42, "zscore:vz", 9, 8, "b"),
+                Finding("gps", "critical", 10, 20, "data_gap_s", 10, 3, "c"),
+            ],
+            ["ml_anomaly: 2 finding(s) overlapped rule findings (gps 10.0-20.0 s), merged"],
+        ),
+        mod.ml_row(labels_clean, [Finding(ml, "warn", 5, 6, "iforest:vz", 0.7, 0.6, "d")], []),
+    ]
+    assert (len(rows[0].in_fault), len(rows[0].outside), rows[0].merged, rows[0].faults_hit) == (
+        1,
+        1,
+        2,
+        1,
+    )
+    md = mod.render_ml_markdown(rows)
+    assert "| 2 | 1 | 1 | 1 | 1 | 2 | 1 / 1 |" in md
+    assert "clean flight" in md and "outside fault" in md

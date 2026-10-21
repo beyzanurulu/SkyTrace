@@ -143,6 +143,19 @@ def test_old_message_variants(write):
     assert log.events["kind"].tolist() == ["arm", "disarm"]
 
 
+def test_ev_takeoff_and_landing(write):
+    w = DataFlashWriter()
+    w.add("ARM", 1.0, ArmState=1)
+    w.add("EV", 2.0, Id=28)  # NOT_LANDED
+    w.add("EV", 9.0, Id=17)  # LAND_COMPLETE_MAYBE: not final, ignored
+    w.add("EV", 9.5, Id=18)  # LAND_COMPLETE
+    w.add("ARM", 10.0, ArmState=0)
+    ev = FlightLog.from_file(write(w)).events
+    assert ev["kind"].tolist() == ["arm", "takeoff", "landing", "disarm"]
+    t = ev["t"].to_numpy()
+    assert (t - t[0]).tolist() == [0.0, 1.0, 8.5, 9.0]  # times relative to the log start
+
+
 def test_err_messages_become_events(write):
     w = DataFlashWriter()
     w.add("ERR", 1.0, Subsys=6, ECode=1)

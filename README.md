@@ -12,6 +12,10 @@ skytrace analyze flight.bin --format json -o out.json  # ArduPilot
 The HTML report is a single offline file (Plotly embedded). Findings are also
 printed as a table in the terminal.
 
+`--ml` adds unsupervised anomaly detection (a rolling robust z-score per signal and
+flight mode; an Isolation Forest is available but off by default) for problems the
+rule detectors do not cover; see `docs/thresholds.md`.
+
 ## Development
 
 ```

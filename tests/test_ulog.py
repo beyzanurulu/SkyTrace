@@ -79,9 +79,20 @@ def test_fixture_values_in_physical_range(sample_ulog):
 
 def test_fixture_events(sample_ulog):
     ev = FlightLog.from_file(sample_ulog).events
-    assert list(ev["kind"]) == ["mode", "arm", "info", "info", "info", "disarm"]
+    assert list(ev["kind"]) == [
+        "mode",
+        "arm",
+        "takeoff",
+        "info",
+        "landing",
+        "info",
+        "info",
+        "disarm",
+    ]
     assert ev.iloc[0]["message"] == "MANUAL"
-    assert "Takeoff detected" in ev.iloc[2]["message"]
+    assert "Takeoff detected" in ev.iloc[3]["message"]
+    # land detector and commander message agree within 10 ms
+    assert ev.iloc[3]["t"] - ev.iloc[2]["t"] == pytest.approx(0.01, abs=0.01)
     assert ev["t"].is_monotonic_increasing
 
 
@@ -366,3 +377,12 @@ def test_sensor_gnss_fallback(monkeypatch):
     log = _parse_fake(monkeypatch, _fake_ulog([gnss]))
     assert log.gps["lat"].iloc[0] == 41.0
     assert log.gps["alt"].iloc[0] == 120.5
+
+
+def test_land_detector_gives_takeoff_and_landing(monkeypatch):
+    land = _topic(
+        "vehicle_land_detected",
+        {"timestamp": _ts(0, 1, 2, 8, 9), "landed": [True, True, False, False, True]},
+    )
+    ev = _parse_fake(monkeypatch, _fake_ulog([land])).events
+    assert list(zip(ev["t"], ev["kind"], strict=True)) == [(2.0, "takeoff"), (9.0, "landing")]

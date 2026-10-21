@@ -40,6 +40,7 @@ TOPIC_CANDIDATES: Final[dict[str, tuple[str, ...]]] = {
     "position": ("vehicle_local_position",),
     "position_sp": ("vehicle_local_position_setpoint",),
     "status": ("vehicle_status",),
+    "land": ("vehicle_land_detected",),
 }
 """Schema source -> PX4 topic names, in priority order."""
 
@@ -430,6 +431,24 @@ def _position(topics: _Topics, cfg: SkyTraceConfig, warnings: list[str]) -> pd.D
     return _asof(out, sp_df, cfg.parser.merge_tolerance_s)
 
 
+def _airborne_events(topics: _Topics, warnings: list[str]) -> list[tuple[float, str, str]]:
+    """takeoff / landing from vehicle_land_detected.landed transitions (PX4's own decision)."""
+    found = topics.get("land")
+    if found is None or "landed" not in found[1].columns:
+        warnings.append("events: no vehicle_land_detected, no takeoff/landing events")
+        return []
+    _, land = found
+    landed = land["landed"].to_numpy(dtype=bool)
+    times = land["t"].to_numpy(dtype=np.float64)
+    rows: list[tuple[float, str, str]] = []
+    for i in np.flatnonzero(landed[1:] != landed[:-1]) + 1:
+        if landed[i]:
+            rows.append((float(times[i]), "landing", "landing (land detector)"))
+        else:
+            rows.append((float(times[i]), "takeoff", "takeoff (land detector)"))
+    return rows
+
+
 def _events(topics: _Topics, ulog: _ULogLike, warnings: list[str]) -> pd.DataFrame:
     rows: list[tuple[float, str, str]] = []
 
@@ -461,6 +480,8 @@ def _events(topics: _Topics, ulog: _ULogLike, warnings: list[str]) -> pd.DataFra
                 if fs != prev_failsafe:
                     rows.append((t, "failsafe", "failsafe activated" if fs else "failsafe cleared"))
                     prev_failsafe = fs
+
+    rows += _airborne_events(topics, warnings)
 
     messages = list(ulog.logged_messages)
     for tagged in getattr(ulog, "logged_messages_tagged", {}).values():

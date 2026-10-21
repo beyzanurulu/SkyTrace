@@ -36,9 +36,15 @@ def run_detectors(
     log: FlightLog,
     config: SkyTraceConfig | None = None,
     only: list[str] | None = None,
+    ml: bool = False,
 ) -> DetectionResult:
-    """Run all (or ``only`` the named) detectors; findings get ids F001, F002, ... by time."""
-    cfg = (config if config is not None else load_config()).detectors
+    """Run all (or ``only`` the named) detectors; findings get ids F001, F002, ... by time.
+
+    ``ml=True`` adds unsupervised anomaly findings (``skytrace.anomaly``); those
+    overlapping a rule finding are merged into it and only mentioned in ``notes``.
+    """
+    full = config if config is not None else load_config()
+    cfg = full.detectors
     names = list(DETECTORS) if only is None else only
     unknown = set(names) - set(DETECTORS)
     if unknown:
@@ -48,6 +54,10 @@ def run_detectors(
     findings: list[Finding] = []
     for name in names:
         findings += DETECTORS[name](log, cfg, notes)
+    if ml:
+        from skytrace import anomaly  # lazy: anomaly imports detector helpers
+
+        findings += anomaly.merge_with_rules(anomaly.detect(log, full, notes), findings, notes)
     findings.sort(key=lambda f: (f.t_start, -SEVERITY_RANK[f.severity], f.detector, f.metric))
     numbered = [replace(f, id=f"F{i:03d}") for i, f in enumerate(findings, start=1)]
     return DetectionResult(findings=numbered, notes=notes)

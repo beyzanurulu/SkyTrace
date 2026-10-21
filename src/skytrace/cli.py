@@ -81,13 +81,17 @@ def analyze(
         typer.Option("--only", help=f"Run only these detectors ({', '.join(DETECTORS)})."),
     ] = None,
     quiet: Annotated[bool, typer.Option("--quiet", "-q", help="No terminal table.")] = False,
+    ml: Annotated[
+        bool,
+        typer.Option("--ml", help="Also run unsupervised ML anomaly detection (slower)."),
+    ] = False,
 ) -> None:
     """Run all detectors on a log and write an HTML or JSON report."""
     console = Console(stderr=True)
     try:
         cfg = load_config(config_path)
         log = FlightLog.from_file(log_path, cfg)
-        result = run_detectors(log, cfg, only=only)
+        result = run_detectors(log, cfg, only=only, ml=ml)
     except (ConfigError, KeyError, ValueError) as exc:
         console.print(f"[red]error:[/] {exc}")
         raise typer.Exit(code=2) from exc
