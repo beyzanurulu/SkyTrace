@@ -260,3 +260,8 @@ api:
   retention_hours: 24        # uploads are deleted after this
   cleanup_interval_s: 600    # how often expired uploads are looked for
   max_loaded: 4              # parsed logs + chat sessions kept in memory (least recently used go)
+offline:
+  # SKYTRACE_MODE=offline: models must be local (Ollama) and every outgoing
+  # connection except to these hosts (and loopback) is refused. "ollama" is the
+  # model server's name in docker-compose.yml.
+  allowed_hosts: [localhost, ollama]

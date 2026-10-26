@@ -1,0 +1,8 @@
+# Config override for docker-compose.yml: the models are served by the
+# "ollama" container (allowed in offline mode via offline.allowed_hosts).
+agent:
+  api_base: http://ollama:11434
+rag:
+  api_base: http://ollama:11434
+api:
+  host: 0.0.0.0

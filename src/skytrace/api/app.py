@@ -46,6 +46,7 @@ from skytrace.agent.tools import AgentContext, call_tool
 from skytrace.api.store import Store, UnknownAnalysisError
 from skytrace.config import SkyTraceConfig, load_config
 from skytrace.detectors import DetectionResult, run_detectors
+from skytrace.offline import mode
 from skytrace.parsers.schema import FlightLog
 from skytrace.report.evidence import evidence_for
 from skytrace.report.html import evidence_figure, render_html, timeline_figure
@@ -224,6 +225,7 @@ def create_app(
         return {
             "version": __version__,
             "model": cfg.agent.model,
+            "mode": mode(),
             "docs": docs_index is not None,
             "max_upload_mb": api.max_upload_mb,
             "retention_hours": api.retention_hours,

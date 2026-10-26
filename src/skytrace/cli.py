@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from skytrace import __version__
-from skytrace.config import ConfigError, load_config
+from skytrace.config import ConfigError, SkyTraceConfig, load_config, with_model
 from skytrace.detectors import DETECTORS, DetectionResult, run_detectors
 from skytrace.parsers.schema import FlightLog
 from skytrace.report import write_html, write_json
@@ -24,6 +24,25 @@ SEVERITY_STYLES = {"critical": "bold red", "warn": "yellow", "info": "dim"}
 class OutputFormat(StrEnum):
     html = "html"
     json = "json"
+
+
+def _config(
+    config_path: Path | None, model: str | None = None, needs_network: str | None = None
+) -> SkyTraceConfig:
+    """Load the config (+ --model); with SKYTRACE_MODE=offline check it and guard the network."""
+    from skytrace import offline
+
+    cfg = load_config(config_path)
+    if model:
+        cfg = with_model(cfg, model)
+    if offline.is_offline():
+        if needs_network:
+            raise offline.OfflineError(
+                f"{needs_network} downloads from the internet and is not available in "
+                "offline mode (SKYTRACE_MODE=offline); build the index while online"
+            )
+        offline.activate(cfg)
+    return cfg
 
 
 def _version(value: bool) -> None:
@@ -92,7 +111,7 @@ def analyze(
     """Run all detectors on a log and write an HTML or JSON report."""
     console = Console(stderr=True)
     try:
-        cfg = load_config(config_path)
+        cfg = _config(config_path)
         log = FlightLog.from_file(log_path, cfg)
         result = run_detectors(log, cfg, only=only, ml=ml)
     except (ConfigError, KeyError, ValueError) as exc:
@@ -140,17 +159,13 @@ def chat(
     ] = Path("skytrace_plots"),
 ) -> None:
     """Ask questions about a log. Every number in an answer is checked against tool outputs."""
-    from dataclasses import replace
-
     from rich.prompt import Prompt
 
     from skytrace.agent import AgentContext, FlightAgent
 
     console = Console()
     try:
-        cfg = load_config(config_path)
-        if model:
-            cfg = replace(cfg, agent=replace(cfg.agent, model=model))
+        cfg = _config(config_path, model)
         log = FlightLog.from_file(log_path, cfg)
         result = run_detectors(log, cfg, ml=ml)
     except (ConfigError, KeyError, ValueError) as exc:
@@ -215,8 +230,6 @@ def serve(
     ] = None,
 ) -> None:
     """Start the web UI and API (upload a log, browse findings, ask questions)."""
-    from dataclasses import replace
-
     console = Console(stderr=True)
     try:
         import uvicorn
@@ -226,14 +239,16 @@ def serve(
         console.print(f"[red]error:[/] {exc}. Install the web extra: pip install 'skytrace[web]'")
         raise typer.Exit(code=2) from exc
     try:
-        cfg = load_config(config_path)
+        cfg = _config(config_path, model)
     except ConfigError as exc:
         console.print(f"[red]error:[/] {exc}")
         raise typer.Exit(code=2) from exc
-    if model:
-        cfg = replace(cfg, agent=replace(cfg.agent, model=model))
+    from skytrace.offline import mode
+
     bind, at = host or cfg.api.host, port or cfg.api.port
-    console.print(f"SkyTrace on http://{bind}:{at}  (model {cfg.agent.model}; Ctrl+C to stop)")
+    console.print(
+        f"SkyTrace on http://{bind}:{at}  (model {cfg.agent.model}, {mode()} mode; Ctrl+C to stop)"
+    )
     uvicorn.run(create_app(cfg), host=bind, port=at, log_level="warning")
 
 
@@ -253,7 +268,7 @@ def docs_build(
 
     console = Console()
     try:
-        cfg = load_config(config_path).rag
+        cfg = _config(config_path, needs_network="skytrace docs build").rag
         n = build(cfg, log=lambda msg: console.print(f"[dim]{msg}[/]"))
     except (ConfigError, DocsError) as exc:
         console.print(f"[red]error:[/] {exc}")
@@ -281,7 +296,7 @@ def docs_search(
 
     console = Console()
     try:
-        results = DocSearch(load_config(config_path).rag).search(query)
+        results = DocSearch(_config(config_path).rag).search(query)
     except (ConfigError, DocsError) as exc:
         console.print(f"[red]error:[/] {exc}")
         raise typer.Exit(code=2) from exc

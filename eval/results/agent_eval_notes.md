@@ -68,3 +68,31 @@ The two remaining failures are left as they are: `battery_min`'s invented value
 is flagged by the verification node, and `gps_problem` is a missing finding id
 in an otherwise correct answer. Both need a stronger model rather than more
 prompt tuning on this question set.
+
+## Step 12: cloud vs. local (partial)
+
+Same question set and scoring; `gemini/gemini-3.5-flash` (Google AI Studio free
+tier) against `ollama_chat/qwen2.5:7b` (laptop RTX 3050 4 GB, last step 10 run).
+Only the fixture log (public pyulog sample) and tool outputs were sent to the
+cloud. Gemini latency excludes the waits for the free tier's rate limit
+(`--rpm 5`); it includes the network round trips.
+
+The free tier allows 20 requests per model and day: the run stopped after 6
+questions. The remaining 5 (`takeoff_landing`, `vibration_not_checked`,
+`docs_reduce_vibration`, `docs_fix_gps`, `out_of_scope`) follow with
+`--only` once the quota resets; until then this is a 6-question comparison.
+
+| Question | qwen2.5:7b (local) | gemini-3.5-flash (cloud) |
+|---|---|---|
+| findings_overview | PASS, 44.1 s | PASS, 21.7 s |
+| duration | PASS, 6.1 s | PASS, 5.1 s |
+| gps_problem | FAIL (no finding id), 114.0 s | PASS, 42.8 s |
+| pitch_error_window | PASS, 17.2 s | PASS, 34.2 s |
+| battery_min | FAIL (invented 28 %), 25.1 s | PASS, 9.1 s |
+| flight_modes | PASS, 6.5 s | PASS, 12.8 s |
+| **6 questions** | **4 / 6**, median 21.2 s | **6 / 6**, median 17.3 s |
+
+The two questions the local model keeps failing are answered correctly by the
+larger cloud model: they are a model-capacity limit, not a tool or prompt
+problem. The local model keeps the log on the machine (and works offline); the
+cloud model is better and, on this laptop, not slower.

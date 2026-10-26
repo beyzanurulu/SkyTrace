@@ -1,0 +1,12 @@
+.git
+.venv
+.mypy_cache
+.ruff_cache
+.pytest_cache
+**/__pycache__
+PX4-Autopilot
+skytrace_plots
+eval/results/agent_plots
+# data/ stays out, except the documentation index (baked into the bundle image)
+data/*
+!data/rag
