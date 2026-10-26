@@ -193,6 +193,35 @@ class AgentConfig:
     number_rel_tol: float = field(metadata=_ZERO_OK)
     prefetch: bool
     prefetch_max_findings: int
+    docs_prefetch_terms: list[str]  # question contains one -> search_docs runs up front
+    docs_prefetch_min_score: float  # ... and is kept only if the best passage scores this
+
+
+@dataclass(frozen=True)
+class DocSourceConfig:
+    """One documentation repository (sparse, shallow git checkout of text files)."""
+
+    repo: str
+    ref: str
+    include: list[str]  # git sparse-checkout patterns (no-cone)
+    url_base: str  # public docs URL the file paths map to
+
+
+@dataclass(frozen=True)
+class RagConfig:
+    """Documentation search (search_docs): local embeddings + Qdrant local mode."""
+
+    embedding_model: str
+    api_base: str | None
+    docs_dir: str
+    index_dir: str
+    keywords: list[str]  # a file is indexed if its path or title matches one of these
+    chunk_chars: int
+    top_k: int
+    excerpt_chars: int
+    batch_size: int
+    px4: DocSourceConfig
+    ardupilot: DocSourceConfig
 
 
 @dataclass(frozen=True)
@@ -202,6 +231,7 @@ class SkyTraceConfig:
     report: ReportConfig
     anomaly: AnomalyConfig
     agent: AgentConfig
+    rag: RagConfig
 
 
 T = TypeVar("T")
@@ -251,6 +281,11 @@ def _convert(value: object, tp: object, path: str, zero_ok: bool) -> object:
         if not isinstance(value, str) or not value.strip():
             raise ConfigError(f"{path} must be a non-empty string, got {value!r}")
         return value
+    if typing.get_origin(tp) is list:
+        (item,) = args
+        if not isinstance(value, list) or not value:
+            raise ConfigError(f"{path} must be a non-empty list, got {value!r}")
+        return [_convert(v, item, f"{path}[{i}]", zero_ok) for i, v in enumerate(value)]
     if tp in (int, float):
         if isinstance(value, bool) or not isinstance(value, int | float):
             raise ConfigError(f"{path} must be a number, got {value!r}")

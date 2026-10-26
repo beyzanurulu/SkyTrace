@@ -9,7 +9,8 @@ A reply passes when all of these hold:
 - ``expect.key_numbers``: each number appears in the answer, at whatever
   precision the answer uses (19.9343 is found as 19.9 or 19.93).
 - ``expect.key_ids``: each finding id appears in the answer.
-- ``expect.key_terms_any``: at least one of these appears (case-insensitive).
+- ``expect.key_terms_any``: at least one of these appears (case-insensitive) in
+  the answer as shown, i.e. including doc sources the agent appended.
 - ``expect.no_tools`` / ``expect.no_numbers``: for questions outside the log, no
   tool call and no number at all.
 
@@ -49,7 +50,7 @@ def check_reply(case: dict[str, Any], reply: AgentReply) -> list[str]:
     v = reply.verification
     if expect.get("verified", True):
         if not v.ok:
-            problems.append(f"unbacked: {', '.join(v.unverified + v.unknown_ids)}")
+            problems.append(f"unbacked: {', '.join(v.unverified + v.unknown_ids + v.unknown_urls)}")
     else:
         if v.unverified != expect.get("unverified", []):
             problems.append(f"flagged numbers {v.unverified} != {expect.get('unverified')}")
@@ -63,8 +64,9 @@ def check_reply(case: dict[str, Any], reply: AgentReply) -> list[str]:
     for fid in expect.get("key_ids", []):
         if fid not in answer:
             problems.append(f"missing finding id {fid}")
+    # Terms are checked in what the user sees, incl. the appended doc sources.
     terms = expect.get("key_terms_any", [])
-    if terms and not any(t.lower() in answer.lower() for t in terms):
+    if terms and not any(t.lower() in reply.answer.lower() for t in terms):
         problems.append(f"none of the key terms {terms}")
     if expect.get("no_tools") and reply.tool_calls:
         problems.append(f"no tool expected, called {reply.tool_calls}")

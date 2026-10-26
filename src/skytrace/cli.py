@@ -157,7 +157,14 @@ def chat(
         console.print(f"[red]error:[/] {exc}")
         raise typer.Exit(code=2) from exc
 
-    agent = FlightAgent(AgentContext(log, result, cfg, plots_dir))
+    from skytrace.agent.rag import DocSearch, DocsError
+
+    try:
+        docs: DocSearch | None = DocSearch(cfg.rag)
+    except DocsError as exc:
+        docs = None
+        console.print(f"[dim]documentation search off: {exc}[/]")
+    agent = FlightAgent(AgentContext(log, result, cfg, plots_dir, docs))
     if ask is None:
         console.print(
             f"[bold]{log_path.name}[/]: {len(result.findings)} findings. Model: {cfg.agent.model}. "
@@ -192,3 +199,56 @@ def chat(
         console.print(reply.answer)
         if reply.tool_calls:
             console.print(f"[dim]tools: {', '.join(reply.tool_calls)}[/]")
+
+
+docs_app = typer.Typer(no_args_is_help=True, help="PX4 / ArduPilot documentation index (RAG).")
+app.add_typer(docs_app, name="docs")
+
+
+@docs_app.command("build")
+def docs_build(
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", exists=True, dir_okay=False, help="YAML config override."),
+    ] = None,
+) -> None:
+    """Fetch the docs (text only), chunk them and build the local search index."""
+    from skytrace.agent.rag import DocsError, build
+
+    console = Console()
+    try:
+        cfg = load_config(config_path).rag
+        n = build(cfg, log=lambda msg: console.print(f"[dim]{msg}[/]"))
+    except (ConfigError, DocsError) as exc:
+        console.print(f"[red]error:[/] {exc}")
+        raise typer.Exit(code=2) from exc
+    except Exception as exc:  # embedding backend: connection, model not pulled ...
+        console.print(
+            f"[red]embedding error ({type(exc).__name__}):[/] {exc}\n"
+            "[dim]For the local default: is Ollama running and the model pulled "
+            "(ollama pull bge-m3)?[/]"
+        )
+        raise typer.Exit(code=1) from exc
+    console.print(f"Indexed {n} chunks into {cfg.index_dir}")
+
+
+@docs_app.command("search")
+def docs_search(
+    query: Annotated[str, typer.Argument(help="Question or keywords.")],
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", exists=True, dir_okay=False, help="YAML config override."),
+    ] = None,
+) -> None:
+    """Show the best documentation passages for a query (what search_docs returns)."""
+    from skytrace.agent.rag import DocSearch, DocsError
+
+    console = Console()
+    try:
+        results = DocSearch(load_config(config_path).rag).search(query)
+    except (ConfigError, DocsError) as exc:
+        console.print(f"[red]error:[/] {exc}")
+        raise typer.Exit(code=2) from exc
+    for r in results:
+        console.print(f"[bold]{r['score']:.3f}[/] {r['title']}\n  [cyan]{r['url']}[/]")
+        console.print(f"  [dim]{r['text'][:240].replace(chr(10), ' ')}[/]")

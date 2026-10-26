@@ -74,6 +74,26 @@ questions:
       verified: true
       key_terms_any: [kalibre, "kontrol edil", calibrat, "not checked", skipped, atlan]
 
+  # Documentation questions (step 10): search_docs must be called and a source url
+  # cited. Replay uses the small test index in tests/fake_docs.py.
+  - id: docs_reduce_vibration
+    question: "Titreşimi nasıl azaltırım?"
+    script:
+      - {tool: search_docs, args: {query: reduce vibration}}
+      - answer: "Uçuş kontrolcüsünü sönümleyici (köpük) üzerine monte edin ve pervaneleri balanslayın (https://docs.px4.io/main/en/assembly/vibration_isolation.html)."
+    expect: {tools: [search_docs], verified: true, key_terms_any: [docs.px4.io, ardupilot.org]}
+
+  - id: docs_fix_gps
+    question: "F001 GPS uyarısı neden olur, nasıl düzeltirim?"
+    script:
+      - {tool: search_docs, args: {query: GPS EPH accuracy}}
+      - answer: "F001 (0.2-1.7 s) GPS doğruluğunun düştüğünü gösteriyor. Dokümana göre GPS'i güç kablolarından uzağa, açık gökyüzü gören yere monte edin ve kalkıştan önce yeterli uydu bekleyin (https://docs.px4.io/main/en/gps_compass/index.html)."
+    expect:
+      tools: [search_docs]
+      verified: true
+      key_ids: [F001]
+      key_terms_any: [docs.px4.io, ardupilot.org]
+
   - id: out_of_scope
     question: "Yarın İstanbul'da hava nasıl olacak?"
     script:

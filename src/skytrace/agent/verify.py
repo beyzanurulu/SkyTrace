@@ -8,6 +8,10 @@ tool number rounded to the answer's decimals equals it, if it is within
 times 100. Signs are ignored ("a drop of 0.3 m/s" for vz = -0.3). Numbers from
 the user's own question, markdown list numbering and finding ids are handled
 separately; every other number that does not match is reported.
+
+Cited urls are checked the same way: a url (without its ``#anchor``) must occur
+in a tool output (search_docs results), so a made-up documentation link is
+reported like a made-up number.
 """
 
 from __future__ import annotations
@@ -27,6 +31,15 @@ _NUMBER: Final = re.compile(r"(?<![\w.,])[-+]?\d+(?:[.,]\d+)?(?:[eE][-+]?\d+)?(?
 # digits glued to letters (firmware hashes like "8583f1da30b6" would back
 # arbitrary integers).
 _TOOL_NUMBER: Final = re.compile(r"(?<![\w.])[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?(?![\w.])")
+_URL: Final = re.compile(r"https?://[^\s()<>\[\]\"'`]+")
+
+
+def _urls(text: str) -> list[str]:
+    return [m.group(0).rstrip(".,;:!?") for m in _URL.finditer(text)]
+
+
+def _page(url: str) -> str:
+    return url.split("#", 1)[0].rstrip("/")
 
 
 def _walk(value: object, out: list[float]) -> None:
@@ -60,10 +73,11 @@ class Verification:
     checked: int
     unverified: list[str] = field(default_factory=list)
     unknown_ids: list[str] = field(default_factory=list)
+    unknown_urls: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
-        return not self.unverified and not self.unknown_ids
+        return not self.unverified and not self.unknown_ids and not self.unknown_urls
 
 
 @dataclass(frozen=True)
@@ -79,8 +93,8 @@ def _blank(match: re.Match[str]) -> str:
 
 
 def answer_numbers(text: str) -> list[_Token]:
-    """Number tokens of a text, without finding ids and list numbering."""
-    cleaned = _LIST_PREFIX.sub(_blank, _FINDING_ID.sub(_blank, text))
+    """Number tokens of a text, without finding ids, urls and list numbering."""
+    cleaned = _LIST_PREFIX.sub(_blank, _FINDING_ID.sub(_blank, _URL.sub(_blank, text)))
     tokens = []
     for m in _NUMBER.finditer(cleaned):
         raw = m.group(0).replace(",", ".")
@@ -126,7 +140,14 @@ def verify_answer(
         for t in tokens
         if round(t.value, 9) not in from_user and not _backed(t, pool, rel_tol)
     ]
-    return Verification(checked=len(tokens), unverified=unverified, unknown_ids=unknown_ids)
+    known_pages = {_page(u) for u in _urls(tool_text)}
+    unknown_urls = list(dict.fromkeys(u for u in _urls(answer) if _page(u) not in known_pages))
+    return Verification(
+        checked=len(tokens),
+        unverified=unverified,
+        unknown_ids=unknown_ids,
+        unknown_urls=unknown_urls,
+    )
 
 
 def annotate(answer: str, v: Verification) -> str:
@@ -138,4 +159,6 @@ def annotate(answer: str, v: Verification) -> str:
         parts.append("numbers " + ", ".join(dict.fromkeys(v.unverified)))
     if v.unknown_ids:
         parts.append("finding ids " + ", ".join(v.unknown_ids))
+    if v.unknown_urls:
+        parts.append("urls " + ", ".join(v.unknown_urls))
     return f"{answer}\n\n⚠ Not backed by any tool output (do not trust): {'; '.join(parts)}."

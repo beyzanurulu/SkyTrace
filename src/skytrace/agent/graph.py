@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import operator
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Annotated, Any, Final, TypedDict
@@ -46,7 +47,11 @@ since log start.
 say that you only answer questions about this log, without calling tools.
 6. Skipped checks (e.g. uncalibrated thresholds) mean "not checked", not "fine": \
 mention them when relevant (get_flight_summary lists them).
-7. Write the whole answer in the language of the question (a Turkish question gets \
+7. For why / how-to-fix questions, call search_docs and cite the url of every passage \
+you use; never write a url that search_docs did not return. Documentation values \
+(e.g. recommended limits) are guidance, not values \
+from this log: say where they come from.
+8. Write the whole answer in the language of the question (a Turkish question gets \
 a Turkish answer, an English one an English answer). Be brief.
 """
 
@@ -171,6 +176,62 @@ def prefetch_outputs(ctx: AgentContext) -> list[str]:
     return [summary, json.dumps(findings, ensure_ascii=False)]
 
 
+DOCS_PREFETCH_ID: Final = "prefetch_search_docs"
+
+
+def wants_docs(question: str, terms: list[str]) -> bool:
+    """A term starts a word of the question ("azalt" in "azaltmak", not "niye" in "saniye")."""
+    q = question.casefold()
+    return any(re.search(rf"(?<!\w){re.escape(t.casefold())}", q) for t in terms)
+
+
+SOURCES_HEADER: Final = "Documentation searched (search_docs):"
+
+
+def with_doc_sources(answer: str, messages: list[Message]) -> str:
+    """Append the searched pages if the answer cites none of them.
+
+    Small local models often use the passages but drop the links; the links are
+    tool output, so the agent adds them instead of the model.
+    """
+    urls: list[str] = []
+    for m in messages:
+        if m.get("role") != "tool":
+            continue
+        try:
+            results = json.loads(str(m["content"])).get("results", [])
+        except (json.JSONDecodeError, AttributeError):
+            continue
+        urls += [r["url"] for r in results if isinstance(r, dict) and "url" in r]
+    pages = list(dict.fromkeys(u.split("#", 1)[0] for u in urls))
+    if not pages or any(p in answer for p in pages):
+        return answer
+    listing = "\n".join(f"- {u}" for u in dict.fromkeys(urls))
+    return f"{answer}\n\n{SOURCES_HEADER}\n{listing}"
+
+
+def docs_prefetch(ctx: AgentContext, question: str) -> list[Message]:
+    """A search_docs call with the question, as if the model had made it.
+
+    Nothing if the best passage scores below ``agent.docs_prefetch_min_score``
+    (off-topic questions like "how will the weather be" match a term too).
+    """
+    args = json.dumps({"query": question}, ensure_ascii=False)
+    output = call_tool(ctx, "search_docs", args)
+    results = json.loads(output).get("results") or []
+    if not results or results[0]["score"] < ctx.config.agent.docs_prefetch_min_score:
+        return []
+    call: Message = {
+        "id": DOCS_PREFETCH_ID,
+        "type": "function",
+        "function": {"name": "search_docs", "arguments": args},
+    }
+    return [
+        {"role": "assistant", "content": "", "tool_calls": [call]},
+        {"role": "tool", "tool_call_id": DOCS_PREFETCH_ID, "content": output},
+    ]
+
+
 class FlightAgent:
     """Multi-turn chat about one log; each question is verified on its own tools."""
 
@@ -191,10 +252,14 @@ class FlightAgent:
         earlier = self.prefetched + [
             str(m["content"]) for m in self.history if m.get("role") == "tool"
         ]
+        cfg = self.ctx.config.agent
+        pre: list[Message] = []
+        if self.ctx.docs is not None and wants_docs(question, cfg.docs_prefetch_terms):
+            pre = docs_prefetch(self.ctx, question)
         state = self.graph.invoke(
             {
-                "messages": [*self.history, {"role": "user", "content": question}],
-                "tool_outputs": earlier,
+                "messages": [*self.history, {"role": "user", "content": question}, *pre],
+                "tool_outputs": earlier + [str(m["content"]) for m in pre if m["role"] == "tool"],
                 "rounds": 0,
                 "question": question,
                 "answer": "",
@@ -206,13 +271,17 @@ class FlightAgent:
         # Keep the conversation (incl. tool results) for follow-up questions.
         self.history = messages
         calls = [
-            c["function"]["name"] for m in messages[start:] for c in (m.get("tool_calls") or [])
+            c["function"]["name"]
+            for m in messages[start:]
+            for c in (m.get("tool_calls") or [])
+            if c["id"] != DOCS_PREFETCH_ID
         ]
+        prefetched = list(PREFETCH_TOOLS) if self.prefetched else []
         return AgentReply(
-            answer=state["answer"],
+            answer=with_doc_sources(state["answer"], messages[start:]),
             raw_answer=str(messages[-1].get("content") or ""),
             verification=state["verification"],
             tool_calls=calls,
             messages=messages[start:],
-            prefetched=list(PREFETCH_TOOLS) if self.prefetched else [],
+            prefetched=prefetched + (["search_docs"] if pre else []),
         )

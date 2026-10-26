@@ -208,3 +208,44 @@ agent:
   prefetch: true
   # At most this many findings are included up front; the rest via list_findings.
   prefetch_max_findings: 30
+  # Why / how-to-fix questions: search_docs runs with the question before the
+  # model is asked (qwen2.5:7b often answered these from memory, with made-up
+  # links). Case-insensitive substrings of the question; needs the docs index.
+  docs_prefetch_terms: [nasıl, neden, niçin, niye, düzelt, azalt, önle, gider, çöz, öneri,
+                        "how to", "how do", "how can", why, fix, reduce, prevent, avoid,
+                        improve, recommend]
+  # Cosine score (bge-m3) the best passage needs for the prefetch to be used.
+  # Rough calibration on 5 questions: off-topic ones ("Yarın hava nasıl olacak?",
+  # a recipe) topped out at 0.45, drone ones started at 0.52.
+  docs_prefetch_min_score: 0.5
+
+rag:
+  # Documentation search for the agent (search_docs). Built once with
+  # `skytrace docs build`; everything stays local (data/ is not committed).
+  # Multilingual embedding model: questions are Turkish, the docs English.
+  embedding_model: ollama/bge-m3
+  api_base: http://localhost:11434
+  docs_dir: data/docs        # sparse checkouts of the documentation (text only)
+  index_dir: data/rag        # Qdrant local-mode index
+  # Topics to index (step 10: log analysis, vibration, tuning, GPS,
+  # battery, failsafe): a file is indexed if its path or title contains one.
+  keywords: [log, flight_review, flight-review, vibration, tuning, tune, pid, gps, gnss,
+             rtk, battery, power, failsafe, safety, ekf, estimator, imu, accel, compass,
+             magnet, esc, motor, crash, diagnos, troubleshoot]
+  chunk_chars: 1500          # sections longer than this are split at paragraphs
+  top_k: 4                   # chunks returned by search_docs
+  excerpt_chars: 800         # text per chunk handed to the model
+  batch_size: 32             # chunks per embedding request
+
+  # PX4 user guide: CC BY 4.0 (docs/LICENSE in the repository).
+  px4:
+    repo: https://github.com/PX4/PX4-Autopilot.git
+    ref: main
+    include: ["/docs/en/**/*.md", "/docs/LICENSE*"]
+    url_base: https://docs.px4.io/main/en/
+  # ArduPilot wiki: CC BY-SA 3.0 (LICENSE in the repository).
+  ardupilot:
+    repo: https://github.com/ArduPilot/ardupilot_wiki.git
+    ref: master
+    include: ["/copter/source/docs/*.rst", "/common/source/docs/*.rst", "/LICENSE*"]
+    url_base: https://ardupilot.org/copter/docs/

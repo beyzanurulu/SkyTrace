@@ -25,6 +25,7 @@ import yaml
 
 from skytrace import FlightLog, load_config
 from skytrace.agent import AgentContext, FlightAgent
+from skytrace.agent.rag import DocSearch, DocsError
 from skytrace.detectors import run_detectors
 from skytrace.evaluation.agent_questions import check_reply
 
@@ -49,11 +50,18 @@ def main() -> int:
         for q in yaml.safe_load(a.questions.read_text("utf-8"))["questions"]
         if not q.get("replay_only")
     ]
+    # Documentation questions need the index (`skytrace docs build`); without it
+    # they fail, which is the honest score.
+    try:
+        docs: DocSearch | None = DocSearch(cfg.rag)
+    except DocsError as exc:
+        print(f"documentation search off: {exc}", file=sys.stderr)
+        docs = None
 
     rows = []
     for case in cases:
         # A fresh agent per question: no answer depends on an earlier one.
-        agent = FlightAgent(AgentContext(log, result, cfg, a.out_dir / "agent_plots"))
+        agent = FlightAgent(AgentContext(log, result, cfg, a.out_dir / "agent_plots", docs))
         t0 = time.perf_counter()
         try:
             reply = agent.ask(case["question"])

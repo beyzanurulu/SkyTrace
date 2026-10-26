@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from skytrace.agent.verify import annotate
 from skytrace.config import load_config
 from skytrace.detectors import run_detectors
 from skytrace.evaluation.agent_questions import check_reply
+from tests.fake_docs import fake_docs
 
 ROOT = Path(__file__).resolve().parents[1]
 QUESTIONS = yaml.safe_load((ROOT / "eval" / "agent_questions.yaml").read_text("utf-8"))["questions"]
@@ -26,7 +28,8 @@ QUESTIONS = yaml.safe_load((ROOT / "eval" / "agent_questions.yaml").read_text("u
 def ctx(tmp_path_factory):
     cfg = load_config()
     log = FlightLog.from_file(ROOT / "tests" / "fixtures" / "sample_log_small.ulg", cfg)
-    return AgentContext(log, run_detectors(log, cfg), cfg, tmp_path_factory.mktemp("plots"))
+    plots = tmp_path_factory.mktemp("plots")
+    return AgentContext(log, run_detectors(log, cfg), cfg, plots, fake_docs(cfg.rag))
 
 
 class ScriptedModel:
@@ -84,9 +87,9 @@ def test_tool_alternatives_and_column_prefix(ctx):
     assert "voltage" in out["columns"]
 
 
-def test_question_set_has_ten_questions():
-    assert len(QUESTIONS) == 10
-    assert len({q["id"] for q in QUESTIONS}) == 10
+def test_question_set_has_twelve_questions():
+    assert len(QUESTIONS) == 12
+    assert len({q["id"] for q in QUESTIONS}) == 12
 
 
 # --- graph behaviour -----------------------------------------------------------
@@ -189,8 +192,9 @@ def test_make_plot_writes_html(ctx):
     assert path.is_file() and path.read_text(encoding="utf-8").lower().startswith("<!doctype html>")
 
 
-def test_search_docs_is_a_stub(ctx):
-    assert json.loads(call_tool(ctx, "search_docs", {"query": "vibration"}))["available"] is False
+def test_search_docs_without_index(ctx):
+    off = replace(ctx, docs=None)
+    assert json.loads(call_tool(off, "search_docs", {"query": "vibration"}))["available"] is False
 
 
 # --- verification ------------------------------------------------------------------

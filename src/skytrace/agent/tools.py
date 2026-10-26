@@ -17,6 +17,7 @@ from typing import Any, Final
 import numpy as np
 import pandas as pd
 
+from skytrace.agent.rag import DocSearch
 from skytrace.anomaly.ml import SIGNAL_LABELS, signal_series
 from skytrace.config import SkyTraceConfig
 from skytrace.detectors import DetectionResult
@@ -56,6 +57,7 @@ class AgentContext:
     result: DetectionResult
     config: SkyTraceConfig
     plot_dir: Path = field(default_factory=lambda: Path("skytrace_plots"))
+    docs: DocSearch | None = None  # None: documentation index not built / not loaded
 
 
 # --- tools ----------------------------------------------------------------------
@@ -246,8 +248,20 @@ def make_plot(
 
 
 def search_docs(ctx: AgentContext, query: str) -> dict[str, Any]:
-    """Documentation search (RAG) is added in step 10; until then nothing is found."""
-    return {"available": False, "results": [], "message": "documentation search is not set up"}
+    """PX4 / ArduPilot documentation passages for a question, with their URLs."""
+    if ctx.docs is None:
+        return {
+            "available": False,
+            "results": [],
+            "message": "documentation index not built; run `skytrace docs build`",
+        }
+    if not query.strip():
+        raise ToolError("give a search query")
+    return {
+        "available": True,
+        "note": "documentation, not values from this log: cite the url",
+        "results": ctx.docs.search(query),
+    }
 
 
 # --- registry and JSON schemas (OpenAI / LiteLLM function-calling format) ----------
@@ -380,7 +394,11 @@ TOOL_SCHEMAS: Final[list[dict[str, Any]]] = [
         "type": "function",
         "function": {
             "name": "search_docs",
-            "description": "Search PX4 / ArduPilot documentation (not available yet).",
+            "description": (
+                "Search the PX4 / ArduPilot documentation (log analysis, vibration, "
+                "tuning, GPS, battery, failsafe) for explanations and fixes; returns "
+                "passages with their url."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {"query": {"type": "string"}},

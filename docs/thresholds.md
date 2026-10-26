@@ -174,6 +174,8 @@ appends a visible warning for anything it cannot back.
 | `number_rel_tol` | `0.005` | fraction | Verification: a number is backed if it equals a tool number rounded to the answer's decimals, or is within this relative tolerance of one (`%`: tool fraction × 100; signs ignored). |
 | `prefetch` | `true` | – | The outputs of `get_flight_summary` and `list_findings` go into the system message up front (and count as evidence for the verification). Small local models often failed to call them or to read them back. |
 | `prefetch_max_findings` | `30` | findings | At most this many findings up front; the model is told how many are not shown and can call `list_findings`. |
+| `docs_prefetch_terms` | nasıl, neden, düzelt, azalt, how to, why, fix, reduce, ... (20) | – | If a word of the question starts with one (case-insensitive), `search_docs` runs with the question before the model is asked: qwen2.5:7b often answered how-to questions from memory, with made-up links. Needs the docs index. If the answer then cites none of the returned pages, the agent appends them ("Documentation searched"). |
+| `docs_prefetch_min_score` | `0.5` | cosine score | The up-front search is used only if its best passage scores at least this (bge-m3). **Rough** calibration on 5 questions: off-topic ones ("Yarın hava nasıl olacak?", a recipe) reached at most 0.45, drone questions at least 0.52. Depends on the embedding model. |
 
 Known limits of the verification: a small integer that happens to appear in a
 tool output (a count, an index, a 3.0 threshold) is accepted even if the model used
@@ -181,3 +183,26 @@ it wrongly; digits glued to letters inside tool strings (firmware hashes) are no
 evidence;
 numbers derived by the model (sums, unit conversions it was not given) are
 flagged even when correct, which is intended.
+
+## `rag` (documentation search, step 10)
+
+`skytrace docs build` fetches the PX4 user guide and the ArduPilot wiki (shallow,
+sparse git checkout, text files only), keeps the pages whose path or title
+matches a keyword, splits them at headings, embeds the chunks with a local model
+and stores them in a Qdrant local-mode index. The agent's `search_docs` tool
+returns the best chunks with their page url; the answer has to cite it. Values
+found in the documentation (e.g. "below 30 m/s/s is acceptable") are guidance,
+not measurements from the log. The verification node accepts them because they
+are in a tool output, and it flags any url that no tool returned.
+
+| Key | Default | Unit | Meaning |
+|---|---|---|---|
+| `embedding_model` | `ollama/bge-m3` | – | LiteLLM embedding model. Multilingual, so Turkish questions find English pages. The index records the model; searching with another model asks for a rebuild. |
+| `api_base` | `http://localhost:11434` | – | Embedding server (Ollama); `null` = the provider's default. |
+| `docs_dir` / `index_dir` | `data/docs` / `data/rag` | – | Checkouts and index; under `data/`, never committed. |
+| `keywords` | log, vibration, tuning, pid, gps, battery, failsafe, ekf, imu, compass, esc, motor, crash, ... (25) | – | A page is indexed if its path or title contains one (case-insensitive). With the defaults: 3369 chunks (PX4 1945, ArduPilot 1424). |
+| `chunk_chars` | `1500` | characters | Longer sections are split at paragraphs; chunks under 40 characters (navigation stubs) are dropped. |
+| `top_k` | `4` | chunks | Results per `search_docs` call. |
+| `excerpt_chars` | `800` | characters | Text per result handed to the model (keeps the context small for local models). |
+| `batch_size` | `32` | chunks | Chunks per embedding request while building. |
+| `px4` / `ardupilot` | see `defaults.yaml` | – | `repo`, `ref` (branch), sparse-checkout `include` patterns and the public `url_base` that page urls are built from. The commit of each checkout is stored in `data/rag/manifest.json`. |
