@@ -183,3 +183,28 @@ anomaly:
     min_feature_z: 59.7
     warn_feature_z: 91.1    # ... and from this |z| on the finding is a warning
     top_features: 3         # most deviating features named in the summary
+
+agent:
+  # Q&A agent (skytrace chat). Any LiteLLM model string; default is a local
+  # Ollama model so log data never leaves the machine. Cloud example:
+  # "gemini/<model>" with GEMINI_API_KEY set (then the tool outputs are sent there).
+  model: ollama_chat/qwen2.5:7b
+  # Ollama server; null = the provider's default endpoint.
+  api_base: http://localhost:11434
+  temperature: 0.0          # deterministic answers
+  timeout_s: 300.0          # per model call (local models on a laptop GPU are slow)
+  # Tool-call rounds before the model must answer with what it has.
+  max_tool_rounds: 6
+  # query_series returns at most this many samples (min/max-preserving reduction).
+  max_series_points: 200
+  # Answer verification: a number in the answer counts as backed by a tool output
+  # if it equals a tool number rounded to the answer's decimals, or is within
+  # this relative tolerance of one.
+  number_rel_tol: 0.005
+  # Give the model the outputs of get_flight_summary and list_findings up front
+  # (in the system message, and as evidence for the verification). Small local
+  # models often fail to call these or to read them back; with them in context
+  # most questions need no or fewer tool calls.
+  prefetch: true
+  # At most this many findings are included up front; the rest via list_findings.
+  prefetch_max_findings: 30

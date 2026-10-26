@@ -181,11 +181,27 @@ class AnomalyConfig:
 
 
 @dataclass(frozen=True)
+class AgentConfig:
+    """Q&A agent (skytrace.agent). The model is any LiteLLM model string."""
+
+    model: str
+    api_base: str | None
+    temperature: float = field(metadata=_ZERO_OK)
+    timeout_s: float
+    max_tool_rounds: int
+    max_series_points: int
+    number_rel_tol: float = field(metadata=_ZERO_OK)
+    prefetch: bool
+    prefetch_max_findings: int
+
+
+@dataclass(frozen=True)
 class SkyTraceConfig:
     parser: ParserConfig
     detectors: DetectorsConfig
     report: ReportConfig
     anomaly: AnomalyConfig
+    agent: AgentConfig
 
 
 T = TypeVar("T")
@@ -230,6 +246,10 @@ def _convert(value: object, tp: object, path: str, zero_ok: bool) -> object:
     if tp is bool:
         if not isinstance(value, bool):
             raise ConfigError(f"{path} must be a boolean, got {value!r}")
+        return value
+    if tp is str:
+        if not isinstance(value, str) or not value.strip():
+            raise ConfigError(f"{path} must be a non-empty string, got {value!r}")
         return value
     if tp in (int, float):
         if isinstance(value, bool) or not isinstance(value, int | float):

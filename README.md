@@ -9,6 +9,17 @@ skytrace analyze flight.ulg --out report.html          # PX4
 skytrace analyze flight.bin --format json -o out.json  # ArduPilot
 ```
 
+Questions about a log (local model via Ollama by default, see `docs/thresholds.md`):
+
+```
+ollama pull qwen2.5:7b
+skytrace chat flight.ulg                                # interactive
+skytrace chat flight.ulg --ask "When did the GPS fail?"  # one question
+```
+
+Every number in an answer is checked against the tool outputs; anything the
+model did not get from the log is marked as not backed.
+
 The HTML report is a single offline file (Plotly embedded). Findings are also
 printed as a table in the terminal.
 

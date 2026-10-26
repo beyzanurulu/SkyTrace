@@ -152,3 +152,32 @@ How the data is prepared:
 | `min_feature_z` | `59.7` | robust z | **Calibrated** (P80). Generalises poorly: info on 32 % of the test flights; real-flight variability alone reaches \|z\| 30-150. A window flagged by the forest is reported only if one feature deviates at least this much (feature vs. median / IQR of all windows of that mode). `contamination` alone flags some windows in every log, and the forest's score is a weak gate because adjacent anomalous windows mask each other. |
 | `warn_feature_z` | `91.1` | robust z | **Calibrated** (P95); warn on 13 % of the test flights. |
 | `top_features` | `3` | – | Most deviating features named in the summary. |
+
+## `agent` (Q&A agent, step 9)
+
+`skytrace chat <log>` (or `--ask "..."` for one question). LangGraph loop
+model ⇄ tools, then a verification node; the model is reached through LiteLLM.
+The tools (`skytrace.agent.tools`) return only numbers from the log and the
+detectors, and do unit conversions themselves (angles in degrees), so the model
+never has to compute a number. The verification node checks every number and
+finding id in the answer against the tool outputs of the conversation and
+appends a visible warning for anything it cannot back.
+
+| Key | Default | Unit | Meaning |
+|---|---|---|---|
+| `model` | `ollama_chat/qwen2.5:7b` | – | Any LiteLLM model string. The local default keeps log data on the machine; a cloud model (e.g. `gemini/...` with `GEMINI_API_KEY`) receives the tool outputs. |
+| `api_base` | `http://localhost:11434` | – | Model server (Ollama); `null` = the provider's default. |
+| `temperature` | `0.0` | – | Deterministic answers. |
+| `timeout_s` | `300` | s | Per model call; local models on a laptop GPU are slow. |
+| `max_tool_rounds` | `6` | rounds | After this many tool rounds the model has to answer without more tools. |
+| `max_series_points` | `200` | points | `query_series(agg="samples")` returns at most this many (min/max-preserving). |
+| `number_rel_tol` | `0.005` | fraction | Verification: a number is backed if it equals a tool number rounded to the answer's decimals, or is within this relative tolerance of one (`%`: tool fraction × 100; signs ignored). |
+| `prefetch` | `true` | – | The outputs of `get_flight_summary` and `list_findings` go into the system message up front (and count as evidence for the verification). Small local models often failed to call them or to read them back. |
+| `prefetch_max_findings` | `30` | findings | At most this many findings up front; the model is told how many are not shown and can call `list_findings`. |
+
+Known limits of the verification: a small integer that happens to appear in a
+tool output (a count, an index, a 3.0 threshold) is accepted even if the model used
+it wrongly; digits glued to letters inside tool strings (firmware hashes) are not
+evidence;
+numbers derived by the model (sums, unit conversions it was not given) are
+flagged even when correct, which is intended.

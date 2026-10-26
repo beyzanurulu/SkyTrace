@@ -23,3 +23,7 @@ Thumbs.db
 
 # Local PX4 checkout for SITL / PRs (separate repo; keep out of git, ruff, pytest)
 /PX4-Autopilot/
+
+# Plots written by the agent's make_plot during eval/agent_eval.py (regenerated)
+/eval/results/agent_plots/
+/skytrace_plots/

@@ -7,6 +7,9 @@ requires-python = ">=3.11,<3.12"
 license = { text = "MIT" }
 dependencies = [
     "jinja2>=3.1.6",
+    "langgraph>=1.2.16",
+    "litellm>=1.106.2",
+    "mcp>=2.3.0",  # imported by litellm.completion whenever tools= is passed (litellm 1.106)
     "numpy>=1.26",
     "pandas>=2.2",
     "plotly>=7.1.0",
@@ -50,7 +53,7 @@ extend-exclude = ["PX4-Autopilot"]
 select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "ANN"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ANN"]
+"tests/**" = ["ANN", "RUF001"]  # Turkish example questions use dotless i
 
 [tool.mypy]
 python_version = "3.11"
