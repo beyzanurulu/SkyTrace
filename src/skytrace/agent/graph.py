@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 import operator
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Annotated, Any, Final, TypedDict
 
@@ -232,6 +232,24 @@ def docs_prefetch(ctx: AgentContext, question: str) -> list[Message]:
     ]
 
 
+@dataclass(frozen=True)
+class ToolStep:
+    """A tool call in progress (for progress display while the model works)."""
+
+    name: str
+    arguments: dict[str, Any]
+
+
+def _new_tool_calls(update: dict[str, Any]) -> Iterator[ToolStep]:
+    for message in (update.get("llm") or {}).get("messages", []):
+        for call in message.get("tool_calls") or []:
+            try:
+                args = json.loads(call["function"].get("arguments") or "{}")
+            except (json.JSONDecodeError, TypeError):
+                args = {}
+            yield ToolStep(call["function"]["name"], args if isinstance(args, dict) else {})
+
+
 class FlightAgent:
     """Multi-turn chat about one log; each question is verified on its own tools."""
 
@@ -247,6 +265,17 @@ class FlightAgent:
         self.history: list[Message] = [{"role": "system", "content": system}]
 
     def ask(self, question: str) -> AgentReply:
+        for item in self.ask_stream(question):
+            if isinstance(item, AgentReply):
+                return item
+        raise RuntimeError("agent graph ended without an answer")  # pragma: no cover
+
+    def ask_stream(self, question: str) -> Iterator[ToolStep | AgentReply]:
+        """Like ``ask``, but yields each tool call as it is made, then the reply.
+
+        Only the final, verified answer is yielded as text: streaming the model's
+        tokens would show numbers before the verification node has checked them.
+        """
         start = len(self.history)
         # Earlier tool results stay valid evidence for follow-up questions.
         earlier = self.prefetched + [
@@ -255,8 +284,10 @@ class FlightAgent:
         cfg = self.ctx.config.agent
         pre: list[Message] = []
         if self.ctx.docs is not None and wants_docs(question, cfg.docs_prefetch_terms):
+            yield ToolStep("search_docs", {"query": question})
             pre = docs_prefetch(self.ctx, question)
-        state = self.graph.invoke(
+        state: dict[str, Any] = {}
+        for mode, chunk in self.graph.stream(
             {
                 "messages": [*self.history, {"role": "user", "content": question}, *pre],
                 "tool_outputs": earlier + [str(m["content"]) for m in pre if m["role"] == "tool"],
@@ -266,7 +297,12 @@ class FlightAgent:
                 "verification": None,
             },
             {"recursion_limit": 4 * self.ctx.config.agent.max_tool_rounds + 10},
-        )
+            stream_mode=["updates", "values"],
+        ):
+            if mode == "values":
+                state = chunk
+                continue
+            yield from _new_tool_calls(chunk)
         messages: list[Message] = state["messages"]
         # Keep the conversation (incl. tool results) for follow-up questions.
         self.history = messages
@@ -277,7 +313,7 @@ class FlightAgent:
             if c["id"] != DOCS_PREFETCH_ID
         ]
         prefetched = list(PREFETCH_TOOLS) if self.prefetched else []
-        return AgentReply(
+        yield AgentReply(
             answer=with_doc_sources(state["answer"], messages[start:]),
             raw_answer=str(messages[-1].get("content") or ""),
             verification=state["verification"],

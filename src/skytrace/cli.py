@@ -201,6 +201,42 @@ def chat(
             console.print(f"[dim]tools: {', '.join(reply.tool_calls)}[/]")
 
 
+@app.command()
+def serve(
+    config_path: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", exists=True, dir_okay=False, help="YAML config override."),
+    ] = None,
+    host: Annotated[str | None, typer.Option(help="Bind address (default: api.host).")] = None,
+    port: Annotated[int | None, typer.Option(help="Port (default: api.port).")] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", "-m", help="LiteLLM model string (default: agent.model)."),
+    ] = None,
+) -> None:
+    """Start the web UI and API (upload a log, browse findings, ask questions)."""
+    from dataclasses import replace
+
+    console = Console(stderr=True)
+    try:
+        import uvicorn
+
+        from skytrace.api import create_app
+    except ImportError as exc:
+        console.print(f"[red]error:[/] {exc}. Install the web extra: pip install 'skytrace[web]'")
+        raise typer.Exit(code=2) from exc
+    try:
+        cfg = load_config(config_path)
+    except ConfigError as exc:
+        console.print(f"[red]error:[/] {exc}")
+        raise typer.Exit(code=2) from exc
+    if model:
+        cfg = replace(cfg, agent=replace(cfg.agent, model=model))
+    bind, at = host or cfg.api.host, port or cfg.api.port
+    console.print(f"SkyTrace on http://{bind}:{at}  (model {cfg.agent.model}; Ctrl+C to stop)")
+    uvicorn.run(create_app(cfg), host=bind, port=at, log_level="warning")
+
+
 docs_app = typer.Typer(no_args_is_help=True, help="PX4 / ArduPilot documentation index (RAG).")
 app.add_typer(docs_app, name="docs")
 

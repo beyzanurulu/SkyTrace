@@ -25,8 +25,17 @@ dependencies = [
 [project.scripts]
 skytrace = "skytrace.cli:app"
 
+[project.optional-dependencies]
+web = [
+    "fastapi>=0.162.0",
+    "python-multipart>=0.0.32",
+    "uvicorn>=0.54.0",
+]
+
 [dependency-groups]
 dev = [
+    "skytrace[web]",  # the API tests need the web extra
+    "httpx>=0.28.1",
     "mypy>=1.11",
     "pandas-stubs>=2.2",
     "pytest>=8.3",
@@ -36,6 +45,10 @@ dev = [
 eval = [
     "matplotlib>=3.11.2",
 ]
+
+[tool.uv]
+# mypy checks the eval/ scripts too, so plain `uv sync` installs their group.
+default-groups = ["dev", "eval"]
 
 [build-system]
 requires = ["hatchling"]

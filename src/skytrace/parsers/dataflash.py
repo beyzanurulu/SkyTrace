@@ -117,10 +117,13 @@ class _Messages:
     def __init__(self, path: Path) -> None:
         reader = mavutil.mavlink_connection(str(path))
         rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        while (msg := reader.recv_match(type=list(WANTED))) is not None:
-            d = msg.to_dict()
-            if "TimeUS" in d:
-                rows[d.pop("mavpackettype")].append(d)
+        try:
+            while (msg := reader.recv_match(type=list(WANTED))) is not None:
+                d = msg.to_dict()
+                if "TimeUS" in d:
+                    rows[d.pop("mavpackettype")].append(d)
+        finally:
+            reader.close()  # else the file stays open (and undeletable on Windows)
         starts = [r[0]["TimeUS"] for r in rows.values() if r]
         ends = [r[-1]["TimeUS"] for r in rows.values() if r]
         self._t0 = min(starts) if starts else 0

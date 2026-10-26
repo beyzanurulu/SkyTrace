@@ -30,6 +30,19 @@ skytrace docs build
 skytrace docs search "vibration too high"   # try the index without the agent
 ```
 
+Web UI (upload a log, findings with plots, chat panel; works on phones too):
+
+```
+uv sync                      # or: pip install 'skytrace[web]'
+skytrace serve               # http://127.0.0.1:8000
+```
+
+The UI is served by the same FastAPI app (`POST /analyze`, `GET /report/{id}`,
+`POST /chat/{id}` as server-sent events, ...; see `src/skytrace/api/app.py`). It
+makes no external requests (Plotly is served locally). Uploads are kept in
+`data/uploads/` and deleted after 24 hours. There is no authentication: it is
+meant for local use and listens on localhost only by default.
+
 The HTML report is a single offline file (Plotly embedded). Findings are also
 printed as a table in the terminal.
 

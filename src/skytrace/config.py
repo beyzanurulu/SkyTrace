@@ -225,6 +225,19 @@ class RagConfig:
 
 
 @dataclass(frozen=True)
+class ApiConfig:
+    """Web API + UI (skytrace serve)."""
+
+    host: str
+    port: int
+    storage_dir: str  # uploaded logs, one folder per analysis
+    max_upload_mb: float
+    retention_hours: float  # uploads older than this are deleted
+    cleanup_interval_s: float
+    max_loaded: int  # parsed logs / chat sessions kept in memory
+
+
+@dataclass(frozen=True)
 class SkyTraceConfig:
     parser: ParserConfig
     detectors: DetectorsConfig
@@ -232,6 +245,7 @@ class SkyTraceConfig:
     anomaly: AnomalyConfig
     agent: AgentConfig
     rag: RagConfig
+    api: ApiConfig
 
 
 T = TypeVar("T")

@@ -206,3 +206,21 @@ are in a tool output, and it flags any url that no tool returned.
 | `excerpt_chars` | `800` | characters | Text per result handed to the model (keeps the context small for local models). |
 | `batch_size` | `32` | chunks | Chunks per embedding request while building. |
 | `px4` / `ardupilot` | see `defaults.yaml` | – | `repo`, `ref` (branch), sparse-checkout `include` patterns and the public `url_base` that page urls are built from. The commit of each checkout is stored in `data/rag/manifest.json`. |
+
+## `api` (web API + UI, step 11)
+
+`skytrace serve` starts FastAPI with the web UI. Uploads live in one folder per
+analysis; parsed logs and chat sessions stay in memory for the most recently used
+analyses and are rebuilt from the stored upload when needed (the chat history
+then starts over). One chat question runs at a time. The chat stream sends each
+tool call as it happens and then the verified answer in one piece; the model's
+tokens are not streamed, because the numbers in them are not verified yet.
+
+| Key | Default | Unit | Meaning |
+|---|---|---|---|
+| `host` / `port` | `127.0.0.1` / `8000` | – | Bind address. No authentication: keep it on localhost unless the network is trusted. |
+| `storage_dir` | `data/uploads` | – | Uploaded logs (`<id>/meta.json`, the log, `plots/`); never committed. |
+| `max_upload_mb` | `300` | MB | Larger uploads get 413, from the Content-Length header before the body is read, or while copying. |
+| `retention_hours` | `24` | h | After this an analysis is no longer served (404) and its folder is deleted by the next sweep. |
+| `cleanup_interval_s` | `600` | s | How often expired folders are swept (also once at startup). |
+| `max_loaded` | `4` | analyses | Parsed logs + chat sessions kept in memory; the least recently used are dropped. |

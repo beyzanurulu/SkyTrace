@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyTrace</title>
+<meta name="description" content="PX4 / ArduPilot flight log analysis, anomaly detection and Q&amp;A">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+<script>
+  try { var t = localStorage.getItem("skytrace-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/" aria-label="SkyTrace home">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
+      <path d="M3 16h7M22 16h7M16 3v5M16 24v5" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M8 19 l8-8 8 8" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="brand-name">SKYTRACE</span>
+    <span class="brand-sub">Flight log analysis</span>
+  </a>
+  <div class="annunciators" aria-label="System status">
+    <span class="ann" id="ann-model" title="Language model"><i></i><span>MODEL</span><b>—</b></span>
+    <span class="ann" id="ann-docs" title="Documentation index (skytrace docs build)"><i></i><span>DOCS</span><b>—</b></span>
+  </div>
+  <button class="btn ghost" id="theme-toggle" type="button" aria-label="Switch day / night display">DAY</button>
+</header>
+
+<main id="view-upload" class="upload-view">
+  <section class="panel upload-panel">
+    <svg class="reticle" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r="52" class="r-faint"/>
+      <circle cx="60" cy="60" r="34" class="r-faint" stroke-dasharray="3 5"/>
+      <path d="M60 2v18M60 100v18M2 60h18M100 60h18" class="r-line"/>
+      <path d="M38 66 l22-22 22 22" class="r-accent"/>
+      <circle cx="60" cy="60" r="2.5" class="r-dot"/>
+    </svg>
+    <p class="eyebrow">Pre-flight · post-flight review</p>
+    <h1>Load a flight log</h1>
+    <p class="lede">PX4 <code>.ulg</code> or ArduPilot <code>.bin</code>. The log is analysed on this machine and
+      deleted automatically after <span id="retention">24</span>&nbsp;h.</p>
+    <label class="dropzone" id="dropzone">
+      <input type="file" id="file-input" accept=".ulg,.bin">
+      <span class="dz-main">Drop the log here or <u>browse</u></span>
+      <small class="dz-sub" id="limit-note">up to 300 MB</small>
+    </label>
+    <label class="check"><input type="checkbox" id="ml-toggle"> <span>ML anomaly scan</span> <small>slower; finds what the rules do not cover</small></label>
+    <div class="progress" id="upload-progress" hidden>
+      <div class="progress-bar"><i id="upload-bar"></i></div>
+      <span class="mono" id="upload-label">Uploading…</span>
+    </div>
+    <p class="alert" id="upload-error" role="alert" hidden></p>
+  </section>
+  <ul class="feature-strip">
+    <li><b>Rule + ML detectors</b><span>vibration, GPS, battery, attitude, motors</span></li>
+    <li><b>Verified answers</b><span>every number is checked against the log</span></li>
+    <li><b>Runs locally</b><span>local model, local documentation index</span></li>
+  </ul>
+</main>
+
+<main id="view-analysis" class="analysis-view" hidden>
+  <div class="col-main">
+    <section class="panel flight-header">
+      <div class="fh-title">
+        <p class="eyebrow">Flight log</p>
+        <h1 id="log-name">—</h1>
+        <p class="sub mono" id="log-meta"></p>
+      </div>
+      <div class="fh-actions">
+        <a class="btn" id="report-link" target="_blank" rel="noopener">Full report ↗</a>
+        <button class="btn ghost" id="new-log" type="button">New log</button>
+        <button class="btn ghost danger" id="delete-log" type="button">Delete</button>
+      </div>
+    </section>
+
+    <section class="caution-panel" id="caution-panel" aria-label="Findings by severity">
+      <div class="lamp" data-sev="critical"><b>0</b><span>WARNING</span></div>
+      <div class="lamp" data-sev="warn"><b>0</b><span>CAUTION</span></div>
+      <div class="lamp" data-sev="info"><b>0</b><span>ADVISORY</span></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Flight data</h2>
+      <dl class="tiles" id="tiles"></dl>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Timeline <small>select a finding bar to inspect it</small></h2>
+      <div class="plot plot-timeline" id="timeline"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">Findings <small id="findings-count"></small></h2>
+      <div class="findings" id="findings"></div>
+      <ul class="notes" id="notes"></ul>
+    </section>
+  </div>
+
+  <aside class="col-chat panel" id="chat-panel" aria-label="Questions about this log">
+    <div class="chat-head">
+      <h2 class="panel-title">Ask the log</h2>
+      <p class="sub">Answers come from tool outputs; numbers that are not backed are flagged.</p>
+    </div>
+    <div class="chat-log" id="chat-log" aria-live="polite"></div>
+    <div class="suggestions" id="suggestions"></div>
+    <form class="chat-form" id="chat-form">
+      <textarea id="chat-input" rows="2" maxlength="2000" placeholder="Ask about this flight…" aria-label="Question"></textarea>
+      <button class="btn primary" id="chat-send" type="submit">Send</button>
+    </form>
+  </aside>
+</main>
+
+<script src="/vendor/plotly.min.js" defer></script>
+<script src="/static/app.js" defer></script>
+</body>
+</html>

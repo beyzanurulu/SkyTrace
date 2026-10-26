@@ -249,3 +249,14 @@ rag:
     ref: master
     include: ["/copter/source/docs/*.rst", "/common/source/docs/*.rst", "/LICENSE*"]
     url_base: https://ardupilot.org/copter/docs/
+
+api:
+  # `skytrace serve`: FastAPI + the web UI. Local use: no authentication, so it
+  # listens on localhost only by default.
+  host: 127.0.0.1
+  port: 8000
+  storage_dir: data/uploads  # one folder per analysis (log, metadata); never committed
+  max_upload_mb: 300         # larger uploads are refused (413); long PX4 logs reach ~200 MB
+  retention_hours: 24        # uploads are deleted after this
+  cleanup_interval_s: 600    # how often expired uploads are looked for
+  max_loaded: 4              # parsed logs + chat sessions kept in memory (least recently used go)
