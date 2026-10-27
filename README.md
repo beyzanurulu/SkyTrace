@@ -10,6 +10,9 @@ and anomaly detectors, an offline HTML report, a web UI, and a Q&A assistant who
 every number is checked against the log. Runs fully locally (local LLM, local
 documentation index), with an enforced offline mode.
 
+**Live demo:** <https://skytrace-demo.onrender.com> (free server: the first load can take a minute) ·
+**Sample reports:** <https://beyzanurulu.github.io/SkyTrace/>
+
 ![SkyTrace web UI: findings, timeline and the evidence plot of a finding](docs/images/analysis.png)
 
 ## What it does
