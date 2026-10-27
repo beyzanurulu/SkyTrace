@@ -107,9 +107,13 @@
 
   // --- status bar -------------------------------------------------------------
   fetch("/api/status").then(function (r) { return r.json(); }).then(function (s) {
-    var model = $("ann-model"), docs = $("ann-docs");
+    var model = $("ann-model"), docs = $("ann-docs"), net = $("ann-net");
+    var local = /^ollama(_chat)?\//.test(s.model);
     model.querySelector("b").textContent = s.model.replace(/^ollama(_chat)?\//, "");
-    model.classList.add("on");
+    model.classList.add(local ? "on" : "off");
+    if (!local) model.title = "Cloud model: tool outputs from the log are sent to the provider";
+    net.querySelector("b").textContent = s.mode === "offline" ? "OFFLINE" : "ONLINE";
+    if (s.mode === "offline") { net.classList.add("on"); net.title = "Offline mode: no connection leaves this machine"; }
     docs.querySelector("b").textContent = s.docs ? "ON" : "OFF";
     docs.classList.add(s.docs ? "on" : "off");
     if (!s.docs) docs.title = "Documentation index not built: run `skytrace docs build`";

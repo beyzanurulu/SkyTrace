@@ -68,3 +68,61 @@ The two remaining failures are left as they are: `battery_min`'s invented value
 is flagged by the verification node, and `gps_problem` is a missing finding id
 in an otherwise correct answer. Both need a stronger model rather than more
 prompt tuning on this question set.
+
+## Step 12: cloud vs. local
+
+Same question set and scoring; `gemini/gemini-3.5-flash` (Google AI Studio free
+tier) against `ollama_chat/qwen2.5:7b` (laptop RTX 3050 4 GB, last step 10 run).
+Only the fixture log (public pyulog sample) and tool outputs were sent to the
+cloud. Gemini latency excludes the waits for the free tier's rate limit
+(`--rpm 5`); it includes the network round trips.
+
+The free tier allows 20 requests per model and day, so the Gemini run was split
+over two days: the first 6 questions in `agent_eval_gemini_gemini_3.5_flash.md`
+(the last 5 rows there are rate-limit errors), the other 5 with `--only` in
+`agent_eval_gemini_gemini_3.5_flash_only.md`. Same model, prompt and code.
+(`gemini-2.5-flash` is no longer offered to new API keys.)
+
+| Question | qwen2.5:7b (local) | gemini-3.5-flash (cloud) |
+|---|---|---|
+| findings_overview | PASS, 44.1 s | PASS, 21.7 s |
+| duration | PASS, 6.1 s | PASS, 5.1 s |
+| gps_problem | FAIL (no finding id), 114.0 s | PASS, 42.8 s |
+| pitch_error_window | PASS, 17.2 s | PASS, 34.2 s |
+| battery_min | FAIL (invented 28 %), 25.1 s | PASS, 9.1 s |
+| flight_modes | PASS, 6.5 s | PASS, 12.8 s |
+| takeoff_landing | PASS, 13.9 s | PASS, 14.4 s |
+| vibration_not_checked | PASS, 21.2 s | PASS, 43.3 s |
+| docs_reduce_vibration | PASS, 92.6 s | PASS, 15.9 s |
+| docs_fix_gps | PASS, 104.4 s | PASS, 14.6 s |
+| out_of_scope | PASS, 30.9 s | PASS, 6.0 s |
+| **11 questions** | **9 / 11**, median 25.1 s | **11 / 11**, median 14.6 s |
+
+The two questions the local model keeps failing are answered correctly by the
+larger cloud model: they are a model-capacity limit, not a tool or prompt
+problem. The biggest latency gap is on the documentation questions, where the
+local model has to read the passages (long prompts on a 4 GB GPU). The local
+model keeps the log on the machine and works offline; the cloud model is more
+accurate and, on this laptop, faster, but every question sends tool outputs
+from the log to the provider, and the free tier's 20 requests per day are not
+enough for regular use.
+## Step 12: offline end to end (network-isolated container)
+
+`docker run --network none skytrace:bundle python eval/offline_e2e.py`:
+**7 / 7** (`eval/results/offline_e2e.md`). Nothing but the deliberate probe tried
+to connect; the probe to pypi.org was refused by the network guard.
+
+The first run, with `--gpus all`, failed both agent questions on the 300 s model
+timeout. Measured inside the container (`ollama run --verbose`):
+
+| Setup | Prompt (tokens/s) | Generation (tokens/s) |
+|---|---:|---:|
+| `--gpus all`, Docker 7.6 GB RAM | 0.56 | 0.46 |
+| `--gpus all`, Docker 11 GB RAM (no swapping, CPU ~90 % idle) | 1.31 | 0.66 |
+| CPU only, Docker 11 GB RAM | 12.4-23.7 | 4.6-6.3 |
+
+qwen2.5:7b does not fit in the 4 GB GPU (12 of 29 layers on it); through Docker /
+WSL the split model is ten times slower than the CPU alone, while the host's
+native Ollama uses the same GPU well. Memory was not the cause. With CPU only the
+agent questions took 159 s and 133 s. The Docker docs now say to use the GPU
+only when the model fits in GPU memory.

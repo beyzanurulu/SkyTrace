@@ -224,3 +224,24 @@ tokens are not streamed, because the numbers in them are not verified yet.
 | `retention_hours` | `24` | h | After this an analysis is no longer served (404) and its folder is deleted by the next sweep. |
 | `cleanup_interval_s` | `600` | s | How often expired folders are swept (also once at startup). |
 | `max_loaded` | `4` | analyses | Parsed logs + chat sessions kept in memory; the least recently used are dropped. |
+## `offline` (offline mode, step 12)
+
+Active when the environment variable `SKYTRACE_MODE=offline` is set (`online`
+is the default; anything else is an error). `skytrace.offline` then checks the
+config (`agent.model` and `rag.embedding_model` must be Ollama models,
+`agent.api_base` and `rag.api_base` must point to an allowed host), refuses
+every outgoing connection and DNS lookup except to loopback and the allowed hosts
+(it raises `OfflineNetworkError`, so a library that tries to phone home fails
+visibly), sets `LITELLM_LOCAL_MODEL_COST_MAP=True` so LiteLLM does not download
+its model list, and makes `skytrace docs build` refuse to run. Incoming
+connections (the web UI) are not affected. The web UI shows the mode in its
+status bar.
+
+| Key | Default | Unit | Meaning |
+|---|---|---|---|
+| `allowed_hosts` | `[localhost, ollama]` | – | Hosts that may be reached besides loopback. `ollama` is the model server in `docker-compose.yml`; add the host of a model server on the local network if there is one. |
+
+`--model` with a cloud model (e.g. `gemini/gemini-3.5-flash`, key in
+`GEMINI_API_KEY`) drops `agent.api_base`, which is the address of the local
+Ollama server, so the request goes to the provider. In offline mode a cloud
+model is refused.

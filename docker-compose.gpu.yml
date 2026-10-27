@@ -1,0 +1,14 @@
+# NVIDIA GPU for the model server (needs the NVIDIA driver; Docker Desktop on
+# Windows passes it through WSL 2):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+# Only worth it if qwen2.5:7b fits in GPU memory (about 6 GB): a model split
+# between a small GPU and the CPU ran ten times slower than CPU only.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

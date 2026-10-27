@@ -13,7 +13,7 @@ from __future__ import annotations
 import dataclasses
 import types
 import typing
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib import resources
 from pathlib import Path
 from typing import Any, TypeVar
@@ -225,6 +225,13 @@ class RagConfig:
 
 
 @dataclass(frozen=True)
+class OfflineConfig:
+    """SKYTRACE_MODE=offline (skytrace.offline)."""
+
+    allowed_hosts: list[str]  # besides loopback; the model server must be one of these
+
+
+@dataclass(frozen=True)
 class ApiConfig:
     """Web API + UI (skytrace serve)."""
 
@@ -246,6 +253,7 @@ class SkyTraceConfig:
     agent: AgentConfig
     rag: RagConfig
     api: ApiConfig
+    offline: OfflineConfig
 
 
 T = TypeVar("T")
@@ -393,3 +401,16 @@ def load_config(path: str | Path | None = None) -> SkyTraceConfig:
     cfg = _build(SkyTraceConfig, data)
     _check(cfg)
     return cfg
+
+
+LOCAL_MODEL_PREFIXES = ("ollama/", "ollama_chat/")
+
+
+def with_model(cfg: SkyTraceConfig, model: str) -> SkyTraceConfig:
+    """``cfg`` with another chat model (``--model``).
+
+    ``agent.api_base`` is the Ollama server of the default config: a cloud model
+    (``gemini/...``) must not be sent there, so it gets the provider's default.
+    """
+    api_base = cfg.agent.api_base if model.startswith(LOCAL_MODEL_PREFIXES) else None
+    return replace(cfg, agent=replace(cfg.agent, model=model, api_base=api_base))

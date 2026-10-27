@@ -43,6 +43,44 @@ makes no external requests (Plotly is served locally). Uploads are kept in
 `data/uploads/` and deleted after 24 hours. There is no authentication: it is
 meant for local use and listens on localhost only by default.
 
+## Offline mode
+
+`SKYTRACE_MODE=offline` guarantees that nothing leaves the machine: the chat and
+embedding models must be local (Ollama), every outgoing connection except to the
+model server is refused (and shows up as an error instead of a silent leak), and
+LiteLLM uses its bundled data instead of downloading it. `skytrace docs build`
+needs the internet once; build the index before going offline.
+
+```
+$env:SKYTRACE_MODE = "offline"     # PowerShell; bash: export SKYTRACE_MODE=offline
+skytrace serve
+```
+
+With Docker (Ollama + SkyTrace; the first start downloads the models):
+
+```
+docker compose up --build                                               # CPU
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build  # NVIDIA GPU, >= 6 GB
+```
+
+Use the GPU override only if the model fits in GPU memory: on a 4 GB laptop GPU
+the split model was ten times slower in Docker than the CPU alone. Give Docker
+enough memory too (Windows: `memory=11GB` under `[wsl2]` in `%USERPROFILE%\.wslconfig`).
+
+All-in-one image with the models and the documentation index inside (about
+9.5 GB), which runs with no network at all:
+
+```
+skytrace docs build
+docker build -f docker/Dockerfile.bundle -t skytrace:bundle .
+docker run --rm --network none skytrace:bundle python eval/offline_e2e.py
+docker run --rm -p 127.0.0.1:8000:8000 skytrace:bundle
+```
+
+Results of the network-isolated run and the cloud vs. local comparison:
+[eval/results/offline_e2e.md](eval/results/offline_e2e.md),
+[eval/results/agent_eval_notes.md](eval/results/agent_eval_notes.md).
+
 The HTML report is a single offline file (Plotly embedded). Findings are also
 printed as a table in the terminal.
 
