@@ -1,0 +1,50 @@
+SkyTrace
+Copyright 2026 Beyza Nur Ulu
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This repository also contains or uses third-party material:
+
+1. tests/fixtures/sample_log_small.ulg and samples/px4_vtol_short.ulg are the
+   test log of pyulog (https://github.com/PX4/pyulog), redistributed under the
+   BSD-3-Clause license:
+
+   Copyright (c) 2016, PX4 Pro Drone Autopilot
+   All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+
+   * Redistributions of source code must retain the above copyright notice, this
+     list of conditions and the following disclaimer.
+
+   * Redistributions in binary form must reproduce the above copyright notice,
+     this list of conditions and the following disclaimer in the documentation
+     and/or other materials provided with the distribution.
+
+   * Neither the name of GpsDrivers nor the names of its
+     contributors may be used to endorse or promote products derived from
+     this software without specific prior written permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+2. samples/px4_sitl_*.ulg were recorded for this project in PX4 SITL
+   (https://github.com/PX4/PX4-Autopilot, BSD-3-Clause) and are covered by the
+   Apache License 2.0 of this repository.
+
+3. The documentation search (`skytrace docs build`) downloads, on the user's
+   machine, the PX4 User Guide (CC BY 4.0) and the ArduPilot documentation
+   (CC BY-SA 3.0). That content is not part of this repository or its packages;
+   search results link to their source pages.
+
+4. The web UI and the HTML report embed plotly.js (MIT License, Plotly, Inc.)
+   from the plotly Python package at run time.

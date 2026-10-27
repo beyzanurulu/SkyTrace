@@ -28,6 +28,7 @@ def make_client(tmp_path, complete=None, clock=None, agent=None, **api):
         cfg,
         api=replace(cfg.api, storage_dir=str(tmp_path / "uploads"), **api),
         agent=replace(cfg.agent, **(agent or {})),
+        demo=replace(cfg.demo, samples_dir=str(tmp_path / "no-samples")),  # not the repo's
     )
     app = create_app(cfg, complete=complete, docs=fake_docs(cfg.rag), clock=clock or Clock())
     return TestClient(app), app
@@ -107,7 +108,79 @@ def test_model_errors_are_reported_in_the_stream(tmp_path):
     client, _ = make_client(tmp_path, complete=broken)
     analysis_id = upload(client).json()["id"]
     res = client.post(f"/chat/{analysis_id}", json={"question": "Uçuş ne kadar sürdü?"})
-    assert events(res) == [("error", {"message": "ConnectionError: ollama not running"})]
+    assert events(res) == [
+        ("error", {"kind": "error", "message": "ConnectionError: ollama not running"})
+    ]
+
+
+class RateLimitError(Exception):  # same name as litellm's, which the API looks for
+    pass
+
+
+def demo_client(tmp_path, complete=None):
+    samples = tmp_path / "samples"
+    samples.mkdir()
+    (samples / "vtol.ulg").write_bytes(FIXTURE.read_bytes())
+    (samples / "samples.yaml").write_text(
+        "- file: vtol.ulg\n  title: Short VTOL flight\n  description: GPS EPH and pitch warnings\n"
+        "- file: missing.ulg\n  title: not there\n",
+        "utf-8",
+    )
+    cfg = load_config()
+    cfg = replace(
+        cfg,
+        api=replace(cfg.api, storage_dir=str(tmp_path / "uploads")),
+        demo=replace(cfg.demo, enabled=True, samples_dir=str(samples)),
+    )
+    return TestClient(create_app(cfg, complete=complete, docs=None, clock=Clock()))
+
+
+def test_demo_lists_and_opens_samples(tmp_path):
+    client = demo_client(tmp_path)
+    assert client.get("/api/samples").json() == [
+        {
+            "id": "vtol",
+            "title": "Short VTOL flight",
+            "description": "GPS EPH and pitch warnings",
+            "size_mb": round(FIXTURE.stat().st_size / 1e6, 1),
+        }
+    ]
+    a = client.post("/analyze/sample/vtol").json()
+    assert a["sample"] is True and a["chat"] is True and len(a["findings"]) == 2
+    assert client.post("/analyze/sample/../secret").status_code == 404
+    assert client.post("/analyze/sample/nope").status_code == 404
+    status = client.get("/api/status").json()
+    assert status["demo"] is True and status["chat_on_uploads"] is False
+
+
+def test_demo_chat_only_on_samples(tmp_path):
+    model = ScriptedModel([{"answer": "İki uyarı: F001 ve F002."}])
+    client = demo_client(tmp_path, complete=model)
+    upload_id = upload(client).json()["id"]
+    assert client.get(f"/analysis/{upload_id}").json()["chat"] is False
+    res = client.post(f"/chat/{upload_id}", json={"question": "Sorunlar neler?"})
+    assert res.status_code == 403 and "sample flights only" in res.json()["detail"]["message"]
+    assert not model.calls  # the upload never reached the (cloud) model
+    sample_id = client.post("/analyze/sample/vtol").json()["id"]
+    res = client.post(f"/chat/{sample_id}", json={"question": "Sorunlar neler?"})
+    assert events(res)[-1][0] == "answer"
+
+
+def test_demo_quota_error_is_a_plain_message(tmp_path):
+    def exhausted(messages, tools):
+        raise RateLimitError("geminiException - 429 RESOURCE_EXHAUSTED")
+
+    client = demo_client(tmp_path, complete=exhausted)
+    sample_id = client.post("/analyze/sample/vtol").json()["id"]
+    ((kind, err),) = events(client.post(f"/chat/{sample_id}", json={"question": "?"}))
+    assert kind == "error" and err["kind"] == "quota"
+    assert "quota is used up" in err["message"] and "own machine" in err["message"]
+    assert err["url"].startswith("https://github.com/")
+
+
+def test_without_samples_file_there_are_no_samples(tmp_path):
+    client, _ = make_client(tmp_path)
+    assert client.get("/api/samples").json() == []
 
 
 def test_empty_question_is_rejected(tmp_path):

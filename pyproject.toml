@@ -1,10 +1,26 @@
 [project]
 name = "skytrace"
-version = "0.1.0"
+version = "1.0.0"
 description = "PX4 / ArduPilot flight log analysis, anomaly detection and Q&A"
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
-license = { text = "MIT" }
+requires-python = ">=3.11,<3.13"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Beyza Nur Ulu" }]
+keywords = ["px4", "ardupilot", "ulog", "dataflash", "drone", "uav", "flight-log", "anomaly-detection", "llm"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Typing :: Typed",
+]
 dependencies = [
     "jinja2>=3.1.6",
     "langgraph>=1.2.16",
@@ -21,6 +37,12 @@ dependencies = [
     "scikit-learn>=1.9.1",
     "typer>=0.27.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/beyzanurulu/SkyTrace"
+Documentation = "https://github.com/beyzanurulu/SkyTrace#readme"
+Changelog = "https://github.com/beyzanurulu/SkyTrace/blob/master/CHANGELOG.md"
+Issues = "https://github.com/beyzanurulu/SkyTrace/issues"
 
 [project.scripts]
 skytrace = "skytrace.cli:app"
@@ -56,6 +78,14 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/skytrace"]
+
+[tool.hatch.build.targets.sdist]
+# Source package: an explicit list, so nothing else in the working tree (sample
+# logs, eval results, local files) can end up on PyPI.
+only-include = [
+    "src", "tests", "docs/thresholds.md", "README.md", "CHANGELOG.md", "CONTRIBUTING.md",
+    "LICENSE", "NOTICE",
+]
 
 [tool.ruff]
 line-length = 100

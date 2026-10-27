@@ -1,0 +1,16 @@
+# Sample flights offered in the web UI (demo.samples_dir). The three SITL logs
+# were flown for this project in PX4 SITL (Gazebo, x500 quadcopter) with a fault
+# injected by eval/sitl/run_scenarios.sh; px4_vtol_short.ulg is the pyulog test
+# log (BSD-3-Clause, see NOTICE).
+- file: px4_sitl_gps_loss.ulg
+  title: GPS lost in flight
+  description: PX4 SITL quadcopter; the GPS is switched off at 20.5 s and stays off until landing.
+- file: px4_sitl_motor_failure.ulg
+  title: Weak motor
+  description: PX4 SITL quadcopter; motor 1 limited to 658 rpm from 19.8 s, the others compensate.
+- file: px4_sitl_low_battery.ulg
+  title: Battery runs low
+  description: PX4 SITL quadcopter flown until the battery warning (from 61 s).
+- file: px4_vtol_short.ulg
+  title: Short VTOL hop
+  description: Real PX4 VTOL log, 6.5 s; GPS accuracy and pitch tracking warnings.

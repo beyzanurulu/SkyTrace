@@ -225,6 +225,16 @@ class RagConfig:
 
 
 @dataclass(frozen=True)
+class DemoConfig:
+    """Public demo (Hugging Face Space): sample logs, chat only on them."""
+
+    enabled: bool
+    samples_dir: str  # sample logs + samples.yaml (title, description per file)
+    chat_on_uploads: bool  # demo: False = chat only on the sample logs
+    local_install_url: str  # shown where chat is not offered
+
+
+@dataclass(frozen=True)
 class OfflineConfig:
     """SKYTRACE_MODE=offline (skytrace.offline)."""
 
@@ -254,6 +264,7 @@ class SkyTraceConfig:
     rag: RagConfig
     api: ApiConfig
     offline: OfflineConfig
+    demo: DemoConfig
 
 
 T = TypeVar("T")

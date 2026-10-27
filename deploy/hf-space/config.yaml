@@ -1,0 +1,20 @@
+# SkyTrace config for the public demo (overrides src/skytrace/defaults.yaml).
+agent:
+  # Cloud model: the key comes from the Space secret GEMINI_API_KEY. In demo
+  # mode only the sample flights are sent to it, never an uploaded log.
+  model: gemini/gemini-3.5-flash
+  api_base: null
+  timeout_s: 120
+api:
+  host: 0.0.0.0
+  port: 7860                  # Hugging Face Spaces
+  storage_dir: /tmp/skytrace-uploads
+  max_upload_mb: 50
+  retention_hours: 1
+  max_loaded: 3
+demo:
+  enabled: true
+  samples_dir: samples
+  chat_on_uploads: false
+# No documentation index in the demo (it needs a local embedding model):
+# search_docs answers "not available".

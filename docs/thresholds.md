@@ -245,3 +245,18 @@ status bar.
 `GEMINI_API_KEY`) drops `agent.api_base`, which is the address of the local
 Ollama server, so the request goes to the provider. In offline mode a cloud
 model is refused.
+## `demo` (public demo, step 13)
+
+For the Hugging Face Space (`deploy/hf-space/`); off by default. With
+`enabled: true` the UI offers the sample flights from `samples_dir`, and chat is
+allowed only on them: an uploaded log is analysed but never sent to the model,
+which in the demo is a cloud model. When the model's quota is used up (rate
+limit) or the service is overloaded, the chat shows a plain message with a link
+to the local setup instead of an error.
+
+| Key | Default | Unit | Meaning |
+|---|---|---|---|
+| `enabled` | `false` | – | Demo mode. |
+| `samples_dir` | `samples` | – | Folder with the sample logs and `samples.yaml` (file, title, description per entry). Also used outside demo mode: if the folder exists, the UI lists the samples. |
+| `chat_on_uploads` | `false` | – | Only in demo mode: `false` = chat only on the sample flights. |
+| `local_install_url` | the README's quick start | – | Shown where chat is not offered and with quota messages. |

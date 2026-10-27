@@ -210,6 +210,21 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .feature-strip b { display: block; font-size: 13.5px; }
 .feature-strip span { color: var(--text-muted); font-size: 12.5px; }
 
+.samples { margin-top: 20px; }
+.sample-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.sample {
+  display: grid; gap: 6px; align-content: start; text-align: left;
+  padding: 14px 16px; cursor: pointer; font: inherit; color: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface-1); box-shadow: var(--shadow);
+  transition: border-color .15s, transform .15s;
+}
+.sample:hover { border-color: var(--accent); transform: translateY(-1px); }
+.sample:disabled { opacity: .6; cursor: progress; transform: none; }
+.sample b { font-size: 14px; }
+.sample span { color: var(--text-muted); font-size: 12.5px; }
+.sample small { font-family: var(--font-mono); color: var(--accent); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+
 /* --- analysis view ------------------------------------------------------- */
 .analysis-view {
   display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 18px;
@@ -329,6 +344,18 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
   margin-top: 8px; padding: 8px 10px; font-size: 13px;
   border-left: 3px solid var(--sev-warn); border-radius: 4px;
   background: color-mix(in srgb, var(--sev-warn) 10%, transparent);
+}
+.msg.notice { border-color: color-mix(in srgb, var(--sev-warn) 45%, transparent); border-left: 3px solid var(--sev-warn); }
+.msg.notice a { display: inline-block; margin-top: 8px; }
+.chat-off {
+  padding: 14px 16px; border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: var(--accent-soft); font-size: 14px;
+}
+.chat-off p { margin: 0 0 10px; }
+.chat-off pre {
+  margin: 0 0 12px; padding: 10px 12px; border-radius: 6px; overflow-x: auto;
+  background: var(--surface-1); border: 1px solid var(--border); font-size: 12.5px; line-height: 1.6;
 }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .chip {
