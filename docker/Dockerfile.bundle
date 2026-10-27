@@ -17,7 +17,7 @@ RUN ollama serve >/tmp/ollama.log 2>&1 & \
     until ollama list >/dev/null 2>&1; do sleep 1; done && \
     ollama pull qwen2.5:7b && ollama pull bge-m3
 
-COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /usr/local/bin/uv
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_INSTALL_DIR=/opt/python
 RUN uv python install 3.11
