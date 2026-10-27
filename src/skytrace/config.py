@@ -186,6 +186,7 @@ class AgentConfig:
 
     model: str
     api_base: str | None
+    fallback_model: str | None  # tried when `model` hits a rate limit / is overloaded
     temperature: float = field(metadata=_ZERO_OK)
     timeout_s: float
     max_tool_rounds: int

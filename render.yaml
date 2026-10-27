@@ -1,0 +1,14 @@
+# Render blueprint for the public demo (https://render.com, free web service).
+# Dashboard: New -> Blueprint -> this repository; then set GEMINI_API_KEY.
+services:
+  - type: web
+    name: skytrace-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/status
+    autoDeploy: true
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false  # secret, entered in the dashboard

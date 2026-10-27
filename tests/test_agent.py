@@ -284,3 +284,36 @@ def test_prefetched_tools_count_as_called(ctx):
     reply = FlightAgent(ctx, model).ask(case["question"])
     assert reply.tool_calls == [] and "get_flight_summary" in reply.prefetched
     assert check_reply(case, reply) == []
+
+
+def test_fallback_model_on_rate_limit(monkeypatch):
+    import litellm
+
+    from skytrace.agent.graph import litellm_complete
+
+    class RateLimitError(Exception):
+        pass
+
+    used = []
+
+    def fake_completion(**kwargs):
+        used.append(kwargs["model"])
+        if kwargs["model"] == "main":
+            raise RateLimitError("429 RESOURCE_EXHAUSTED")
+        msg = type("M", (), {"content": "ok", "tool_calls": None})()
+        return type("R", (), {"choices": [type("C", (), {"message": msg})()]})()
+
+    monkeypatch.setattr(litellm, "completion", fake_completion)
+    agent_cfg = replace(load_config().agent, model="main", fallback_model="backup")
+    assert litellm_complete(agent_cfg)([], [])["content"] == "ok"
+    assert used == ["main", "backup"]
+
+    def bad_request(**kwargs):
+        used.append(kwargs["model"])
+        raise ValueError("bad request")
+
+    used.clear()
+    monkeypatch.setattr(litellm, "completion", bad_request)
+    with pytest.raises(ValueError):
+        litellm_complete(agent_cfg)([], [])
+    assert used == ["main"]  # not a capacity problem: no fallback

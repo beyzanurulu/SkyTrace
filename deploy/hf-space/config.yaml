@@ -3,15 +3,16 @@ agent:
   # Cloud model: the key comes from the Space secret GEMINI_API_KEY. In demo
   # mode only the sample flights are sent to it, never an uploaded log.
   model: gemini/gemini-3.5-flash
+  fallback_model: gemini/gemini-3.5-flash-lite
   api_base: null
   timeout_s: 120
 api:
   host: 0.0.0.0
   port: 7860                  # Hugging Face Spaces
   storage_dir: /tmp/skytrace-uploads
-  max_upload_mb: 50
+  max_upload_mb: 20
   retention_hours: 1
-  max_loaded: 3
+  max_loaded: 2
 demo:
   enabled: true
   samples_dir: samples

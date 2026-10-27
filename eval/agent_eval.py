@@ -19,50 +19,19 @@ import sys
 import time
 from datetime import date
 from pathlib import Path
-from typing import Any
 
 import yaml
 
 from skytrace import FlightLog, load_config
 from skytrace.agent import AgentContext, FlightAgent
-from skytrace.agent.graph import Complete, Message, litellm_complete
+from skytrace.agent.graph import litellm_complete
 from skytrace.agent.rag import DocSearch, DocsError
 from skytrace.config import with_model
 from skytrace.detectors import run_detectors
 from skytrace.evaluation.agent_questions import check_reply
+from skytrace.evaluation.throttle import Throttled
 
 ROOT = Path(__file__).resolve().parents[1]
-RATE_LIMIT_RETRIES = 6
-
-
-class Throttled:
-    """A Complete that keeps to ``rpm`` calls per minute and retries rate limits."""
-
-    def __init__(self, complete: Complete, rpm: float) -> None:
-        self.complete = complete
-        self.interval = 60.0 / rpm
-        self.last = 0.0
-        self.waited = 0.0  # seconds slept, subtracted from the latency
-
-    def _sleep(self, seconds: float) -> None:
-        time.sleep(seconds)
-        self.waited += seconds
-
-    def __call__(self, messages: list[Message], tools: list[dict[str, Any]]) -> Message:
-        from litellm.exceptions import RateLimitError, ServiceUnavailableError
-
-        for attempt in range(RATE_LIMIT_RETRIES + 1):
-            gap = self.last + self.interval - time.monotonic()
-            if gap > 0:
-                self._sleep(gap)
-            self.last = time.monotonic()
-            try:
-                return self.complete(messages, tools)
-            except (RateLimitError, ServiceUnavailableError):
-                if attempt == RATE_LIMIT_RETRIES:
-                    raise
-                self._sleep(min(60.0, 10.0 * 2**attempt))
-        raise AssertionError("unreachable")
 
 
 def main() -> int:

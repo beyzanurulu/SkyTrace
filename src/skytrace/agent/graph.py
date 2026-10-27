@@ -81,6 +81,16 @@ class AgentReply:
     """Tools whose outputs were in the context from the start (agent.prefetch)."""
 
 
+def is_capacity_error(exc: BaseException) -> bool:
+    """A rate limit / quota or overload of the model service (not a bad request)."""
+    name, text = type(exc).__name__, str(exc)
+    return (
+        "RateLimit" in name
+        or "ServiceUnavailable" in name
+        or any(code in text for code in (" 429", " 503", "RESOURCE_EXHAUSTED"))
+    )
+
+
 def litellm_complete(cfg: AgentConfig) -> Complete:
     """The real model, through LiteLLM (local Ollama by default)."""
 
@@ -97,7 +107,14 @@ def litellm_complete(cfg: AgentConfig) -> Complete:
             kwargs["tools"] = tools
         if cfg.api_base:
             kwargs["api_base"] = cfg.api_base
-        response = litellm.completion(**kwargs)
+        models = [cfg.model, *([cfg.fallback_model] if cfg.fallback_model else [])]
+        for i, model in enumerate(models):
+            try:
+                response = litellm.completion(**{**kwargs, "model": model})
+                break
+            except Exception as exc:
+                if i + 1 == len(models) or not is_capacity_error(exc):
+                    raise
         message = response.choices[0].message
         out: Message = {"role": "assistant", "content": message.content or ""}
         if getattr(message, "tool_calls", None):
