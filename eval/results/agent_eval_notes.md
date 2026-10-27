@@ -69,7 +69,7 @@ is flagged by the verification node, and `gps_problem` is a missing finding id
 in an otherwise correct answer. Both need a stronger model rather than more
 prompt tuning on this question set.
 
-## Step 12: cloud vs. local (partial)
+## Step 12: cloud vs. local
 
 Same question set and scoring; `gemini/gemini-3.5-flash` (Google AI Studio free
 tier) against `ollama_chat/qwen2.5:7b` (laptop RTX 3050 4 GB, last step 10 run).
@@ -77,10 +77,11 @@ Only the fixture log (public pyulog sample) and tool outputs were sent to the
 cloud. Gemini latency excludes the waits for the free tier's rate limit
 (`--rpm 5`); it includes the network round trips.
 
-The free tier allows 20 requests per model and day: the run stopped after 6
-questions. The remaining 5 (`takeoff_landing`, `vibration_not_checked`,
-`docs_reduce_vibration`, `docs_fix_gps`, `out_of_scope`) follow with
-`--only` once the quota resets; until then this is a 6-question comparison.
+The free tier allows 20 requests per model and day, so the Gemini run was split
+over two days: the first 6 questions in `agent_eval_gemini_gemini_3.5_flash.md`
+(the last 5 rows there are rate-limit errors), the other 5 with `--only` in
+`agent_eval_gemini_gemini_3.5_flash_only.md`. Same model, prompt and code.
+(`gemini-2.5-flash` is no longer offered to new API keys.)
 
 | Question | qwen2.5:7b (local) | gemini-3.5-flash (cloud) |
 |---|---|---|
@@ -90,9 +91,18 @@ questions. The remaining 5 (`takeoff_landing`, `vibration_not_checked`,
 | pitch_error_window | PASS, 17.2 s | PASS, 34.2 s |
 | battery_min | FAIL (invented 28 %), 25.1 s | PASS, 9.1 s |
 | flight_modes | PASS, 6.5 s | PASS, 12.8 s |
-| **6 questions** | **4 / 6**, median 21.2 s | **6 / 6**, median 17.3 s |
+| takeoff_landing | PASS, 13.9 s | PASS, 14.4 s |
+| vibration_not_checked | PASS, 21.2 s | PASS, 43.3 s |
+| docs_reduce_vibration | PASS, 92.6 s | PASS, 15.9 s |
+| docs_fix_gps | PASS, 104.4 s | PASS, 14.6 s |
+| out_of_scope | PASS, 30.9 s | PASS, 6.0 s |
+| **11 questions** | **9 / 11**, median 25.1 s | **11 / 11**, median 14.6 s |
 
 The two questions the local model keeps failing are answered correctly by the
 larger cloud model: they are a model-capacity limit, not a tool or prompt
-problem. The local model keeps the log on the machine (and works offline); the
-cloud model is better and, on this laptop, not slower.
+problem. The biggest latency gap is on the documentation questions, where the
+local model has to read the passages (long prompts on a 4 GB GPU). The local
+model keeps the log on the machine and works offline; the cloud model is more
+accurate and, on this laptop, faster, but every question sends tool outputs
+from the log to the provider, and the free tier's 20 requests per day are not
+enough for regular use.
