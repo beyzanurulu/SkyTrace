@@ -4,6 +4,18 @@ All notable changes to SkyTrace. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-10-27
+
+### Fixed
+
+- The sample flight logs in `samples/` were missing from the repository (a
+  `*.ulg` ignore rule caught them): the web UI showed no samples, and the sample
+  report and the Hugging Face demo could not be built. A test now checks that
+  every listed sample is committed. The package itself is unchanged.
+- Release workflow: the image vulnerability scan referred to a non-existent
+  action version, so v1.0.0 got no image and no GitHub release; a release can now
+  be re-run for an existing tag (without publishing to PyPI again).
+
 ## [1.0.0] - 2026-10-27
 
 First public release.

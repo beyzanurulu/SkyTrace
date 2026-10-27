@@ -9,7 +9,7 @@ USER user
 ENV HOME=/home/user PATH=/home/user/.local/bin:$PATH
 WORKDIR /home/user/app
 
-ARG SKYTRACE_VERSION=1.0.0
+ARG SKYTRACE_VERSION=1.0.1
 RUN pip install --no-cache-dir --user "skytrace[web]==${SKYTRACE_VERSION}"
 
 ARG RAW=https://raw.githubusercontent.com/beyzanurulu/SkyTrace/v${SKYTRACE_VERSION}/samples

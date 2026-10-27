@@ -14,6 +14,8 @@ build/
 *.ulg
 *.bin
 !tests/fixtures/*.ulg
+# sample flights for the UI / demo (our own SITL flights + the pyulog test log)
+!samples/*.ulg
 
 # Editors / OS
 .vscode/
