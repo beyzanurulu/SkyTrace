@@ -38,7 +38,10 @@
   }
   function domain(url) { try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return ""; } }
   async function errorText(res) {
-    try { var j = await res.json(); return typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail); }
+    try {
+      var j = await res.json(), d = j.detail;
+      return typeof d === "string" ? d : (d && d.message) || JSON.stringify(d);
+    }
     catch (e) { return res.status + " " + res.statusText; }
   }
 
@@ -119,7 +122,46 @@
     if (!s.docs) docs.title = "Documentation index not built: run `skytrace docs build`";
     $("retention").textContent = s.retention_hours;
     $("limit-note").textContent = "up to " + s.max_upload_mb + " MB · .ulg / .bin";
+    state.status = s;
+    $("ann-demo").hidden = !s.demo;
+    $("chat-off-link").href = s.local_install_url;
+    $("samples-note").textContent = s.demo ? "chat is available on these" : "";
+    if (s.demo) {
+      $("lede").textContent = "PX4 .ulg or ArduPilot .bin. The log is analysed on the demo server, never sent " +
+        "to the cloud model, and deleted after " + s.retention_hours + " h.";
+    }
   }).catch(function () {});
+
+  // --- sample flights -----------------------------------------------------------
+  fetch("/api/samples").then(function (r) { return r.json(); }).then(function (list) {
+    if (!list.length) return;
+    var grid = $("sample-grid");
+    list.forEach(function (sm) {
+      var b = el("button", "sample");
+      b.type = "button";
+      b.appendChild(el("small", null, sm.size_mb + " MB"));
+      b.appendChild(el("b", null, sm.title));
+      if (sm.description) b.appendChild(el("span", null, sm.description));
+      b.addEventListener("click", function () { openSample(sm, b); });
+      grid.appendChild(b);
+    });
+    $("samples").hidden = false;
+  }).catch(function () {});
+
+  function openSample(sm, button) {
+    document.querySelectorAll(".sample").forEach(function (x) { x.disabled = true; });
+    $("upload-error").hidden = true;
+    $("upload-progress").hidden = false;
+    $("upload-bar").parentElement.classList.add("busy");
+    $("upload-label").textContent = "Analysing " + sm.title + "…";
+    fetch("/analyze/sample/" + encodeURIComponent(sm.id), { method: "POST" }).then(async function (r) {
+      if (!r.ok) throw new Error(await errorText(r));
+      return r.json();
+    }).then(showAnalysis).catch(function (e) { uploadError(e.message); }).finally(function () {
+      document.querySelectorAll(".sample").forEach(function (x) { x.disabled = false; });
+      button.blur();
+    });
+  }
 
   // --- upload ---------------------------------------------------------------
   var dz = $("dropzone"), input = $("file-input");
@@ -233,6 +275,12 @@
     (s.skipped_checks || []).concat(s.parser_warnings || []).forEach(function (n) { notes.appendChild(el("li", null, n)); });
 
     resetChat();
+    // Demo: no chat on a visitor's own upload (it would go to the cloud model).
+    var chatOn = a.chat !== false;
+    $("chat-off").hidden = chatOn;
+    $("chat-form").hidden = !chatOn;
+    $("suggestions").hidden = !chatOn;
+    log.hidden = !chatOn;
     $("timeline").textContent = "";
     fetch("/figures/" + a.id).then(function (r) {
       if (!r.ok) throw new Error(r.status);
@@ -477,6 +525,18 @@
       msg.classList.add("error");
       msg.appendChild(el("div", "text", text));
     };
+    var notice = function (text, url) {  // quota / overload: not the user's fault
+      live.classList.remove("live");
+      msg.classList.add("notice");
+      msg.appendChild(el("div", "text", text));
+      if (url) {
+        var a = el("a", null, "Run SkyTrace locally ↗");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        msg.appendChild(a);
+      }
+    };
 
     try {
       var res = await fetch("/chat/" + state.analysis.id, {
@@ -504,7 +564,9 @@
           else if (ev === "status") addStep(payload.message);
           else if (ev === "answer") { live.classList.remove("live"); renderAnswer(msg, payload); done = true; }
           else if (ev === "error") {
-            fail("Model error: " + payload.message + ". Is Ollama running and the model pulled (ollama pull qwen2.5:7b)?");
+            if (payload.kind === "quota" || payload.kind === "busy") notice(payload.message, payload.url);
+            else if (state.status && state.status.demo) fail("Model error: " + payload.message);
+            else fail("Model error: " + payload.message + ". Is Ollama running and the model pulled (ollama pull qwen2.5:7b)?");
             done = true;
           }
         }

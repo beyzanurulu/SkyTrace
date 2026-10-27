@@ -265,3 +265,12 @@ offline:
   # connection except to these hosts (and loopback) is refused. "ollama" is the
   # model server's name in docker-compose.yml.
   allowed_hosts: [localhost, ollama]
+demo:
+  # Public demo mode (deploy/hf-space). Off for local use: there every log can
+  # be discussed with the (local) model.
+  enabled: false
+  samples_dir: samples       # sample logs offered in the UI, listed in samples.yaml
+  # In the demo the model is a cloud one: only the sample logs (public SITL
+  # flights) may be sent to it, never a visitor's own upload.
+  chat_on_uploads: false
+  local_install_url: https://github.com/beyzanurulu/SkyTrace#quick-start

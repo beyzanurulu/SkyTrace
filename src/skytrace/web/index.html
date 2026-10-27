@@ -23,6 +23,7 @@
     <span class="brand-sub">Flight log analysis</span>
   </a>
   <div class="annunciators" aria-label="System status">
+    <span class="ann on" id="ann-demo" title="Public demo: chat on the sample flights only" hidden><i></i><span>DEMO</span></span>
     <span class="ann" id="ann-net" title="Network mode (SKYTRACE_MODE)"><i></i><span>NET</span><b>—</b></span>
     <span class="ann" id="ann-model" title="Language model"><i></i><span>MODEL</span><b>—</b></span>
     <span class="ann" id="ann-docs" title="Documentation index (skytrace docs build)"><i></i><span>DOCS</span><b>—</b></span>
@@ -41,7 +42,7 @@
     </svg>
     <p class="eyebrow">Pre-flight · post-flight review</p>
     <h1>Load a flight log</h1>
-    <p class="lede">PX4 <code>.ulg</code> or ArduPilot <code>.bin</code>. The log is analysed on this machine and
+    <p class="lede" id="lede">PX4 <code>.ulg</code> or ArduPilot <code>.bin</code>. The log is analysed on this machine and
       deleted automatically after <span id="retention">24</span>&nbsp;h.</p>
     <label class="dropzone" id="dropzone">
       <input type="file" id="file-input" accept=".ulg,.bin">
@@ -54,6 +55,10 @@
       <span class="mono" id="upload-label">Uploading…</span>
     </div>
     <p class="alert" id="upload-error" role="alert" hidden></p>
+  </section>
+  <section class="samples" id="samples" hidden>
+    <h2 class="panel-title">Or open a sample flight <small id="samples-note"></small></h2>
+    <div class="sample-grid" id="sample-grid"></div>
   </section>
   <ul class="feature-strip">
     <li><b>Rule + ML detectors</b><span>vibration, GPS, battery, attitude, motors</span></li>
@@ -106,6 +111,16 @@
       <p class="sub">Answers come from tool outputs; numbers that are not backed are flagged.</p>
     </div>
     <div class="chat-log" id="chat-log" aria-live="polite"></div>
+    <div class="chat-off" id="chat-off" hidden>
+      <p class="eyebrow">Chat runs on your machine</p>
+      <p>In this demo the assistant answers questions about the <b>sample flights</b> only, so
+        your own log is never sent to a cloud model. Run SkyTrace locally to ask about your logs
+        with a local model; nothing leaves your computer.</p>
+      <pre class="mono">pip install "skytrace[web]"
+ollama pull qwen2.5:7b
+skytrace serve</pre>
+      <a class="btn" id="chat-off-link" target="_blank" rel="noopener">Local setup guide ↗</a>
+    </div>
     <div class="suggestions" id="suggestions"></div>
     <form class="chat-form" id="chat-form">
       <textarea id="chat-input" rows="2" maxlength="2000" placeholder="Ask about this flight…" aria-label="Question"></textarea>
