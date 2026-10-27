@@ -106,3 +106,23 @@ model keeps the log on the machine and works offline; the cloud model is more
 accurate and, on this laptop, faster, but every question sends tool outputs
 from the log to the provider, and the free tier's 20 requests per day are not
 enough for regular use.
+## Step 12: offline end to end (network-isolated container)
+
+`docker run --network none skytrace:bundle python eval/offline_e2e.py`:
+**7 / 7** (`eval/results/offline_e2e.md`). Nothing but the deliberate probe tried
+to connect; the probe to pypi.org was refused by the network guard.
+
+The first run, with `--gpus all`, failed both agent questions on the 300 s model
+timeout. Measured inside the container (`ollama run --verbose`):
+
+| Setup | Prompt (tokens/s) | Generation (tokens/s) |
+|---|---:|---:|
+| `--gpus all`, Docker 7.6 GB RAM | 0.56 | 0.46 |
+| `--gpus all`, Docker 11 GB RAM (no swapping, CPU ~90 % idle) | 1.31 | 0.66 |
+| CPU only, Docker 11 GB RAM | 12.4-23.7 | 4.6-6.3 |
+
+qwen2.5:7b does not fit in the 4 GB GPU (12 of 29 layers on it); through Docker /
+WSL the split model is ten times slower than the CPU alone, while the host's
+native Ollama uses the same GPU well. Memory was not the cause. With CPU only the
+agent questions took 159 s and 133 s. The Docker docs now say to use the GPU
+only when the model fits in GPU memory.

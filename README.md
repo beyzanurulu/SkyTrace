@@ -60,11 +60,15 @@ With Docker (Ollama + SkyTrace; the first start downloads the models):
 
 ```
 docker compose up --build                                               # CPU
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build  # NVIDIA GPU
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build  # NVIDIA GPU, >= 6 GB
 ```
 
+Use the GPU override only if the model fits in GPU memory: on a 4 GB laptop GPU
+the split model was ten times slower in Docker than the CPU alone. Give Docker
+enough memory too (Windows: `memory=11GB` under `[wsl2]` in `%USERPROFILE%\.wslconfig`).
+
 All-in-one image with the models and the documentation index inside (about
-7 GB), which runs with no network at all:
+9.5 GB), which runs with no network at all:
 
 ```
 skytrace docs build
