@@ -15,7 +15,7 @@
   ];
   var PLOT_CONFIG = { responsive: true, displaylogo: false, modeBarButtonsToRemove: ["select2d", "lasso2d"] };
 
-  var state = { analysis: null, figures: null, findings: {}, known: new Set(), busy: false };
+  var state = { analysis: null, figures: null, findings: {}, known: new Set(), busy: false, samples: {} };
 
   // --- helpers ------------------------------------------------------------
   function esc(s) {
@@ -144,6 +144,7 @@
       if (sm.description) b.appendChild(el("span", null, sm.description));
       b.addEventListener("click", function () { openSample(sm, b); });
       grid.appendChild(b);
+      state.samples[sm.id] = sm;
     });
     $("samples").hidden = false;
   }).catch(function () {});
@@ -274,7 +275,7 @@
     notes.textContent = "";
     (s.skipped_checks || []).concat(s.parser_warnings || []).forEach(function (n) { notes.appendChild(el("li", null, n)); });
 
-    resetChat();
+    resetChat(a);
     // Demo: no chat on a visitor's own upload (it would go to the cloud model).
     var chatOn = a.chat !== false;
     $("chat-off").hidden = chatOn;
@@ -388,7 +389,7 @@
   // --- chat -----------------------------------------------------------------
   var log = $("chat-log"), form = $("chat-form"), ta = $("chat-input");
 
-  function resetChat() {
+  function resetChat(a) {
     log.textContent = "";
     var hello = el("div", "msg bot");
     hello.appendChild(el("div", "text",
@@ -397,12 +398,45 @@
     var sug = $("suggestions");
     sug.textContent = "";
     sug.hidden = false;
-    SUGGESTIONS.forEach(function (q) {
+    var sample = a && a.sample_id ? state.samples[a.sample_id] : null;
+    var questions = sample && sample.questions.length ? sample.questions : SUGGESTIONS;
+    var recorded = {};
+    questions.forEach(function (q) {
       var b = el("button", "chip", q);
       b.type = "button";
-      b.addEventListener("click", function () { ask(q); });
+      b.addEventListener("click", function () {
+        if (recorded[q]) showRecorded(q, recorded[q]); else ask(q);
+      });
       sug.appendChild(b);
     });
+    // Recorded answers of a sample flight: instant, and independent of the model quota.
+    if (sample && sample.recorded.length) {
+      fetch("/api/samples/" + encodeURIComponent(a.sample_id) + "/answers").then(function (r) {
+        return r.ok ? r.json() : [];
+      }).then(function (list) {
+        if (state.analysis !== a) return;
+        list.forEach(function (x) { recorded[x.question] = x; });
+        sug.querySelectorAll(".chip").forEach(function (b) {
+          if (recorded[b.textContent]) {
+            b.classList.add("recorded");
+            b.title = "Recorded answer: shown instantly";
+          }
+        });
+      }).catch(function () {});
+    }
+  }
+
+  function showRecorded(question, p) {
+    if (state.busy) return;
+    $("suggestions").hidden = true;
+    log.appendChild(el("div", "msg user", question));
+    var msg = el("div", "msg bot");
+    msg.appendChild(el("div", "recorded-tag",
+      "Recorded answer · " + p.model.replace(/^[a-z_]+\//, "") + " · " + p.recorded_at +
+      " — type your own question for a live answer"));
+    renderAnswer(msg, p);
+    log.appendChild(msg);
+    log.scrollTop = log.scrollHeight;
   }
 
   function inline(text) {

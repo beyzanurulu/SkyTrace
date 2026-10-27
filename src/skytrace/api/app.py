@@ -59,6 +59,7 @@ from skytrace.report.evidence import evidence_for
 from skytrace.report.html import evidence_figure, render_html, timeline_figure
 
 LOG_SUFFIXES: Final = (".ulg", ".bin")
+ANSWERS_FILE: Final = "answers.json"
 CHUNK: Final = 1 << 20
 MULTIPART_SLACK: Final = 1 << 20  # form overhead allowed on top of the file itself
 WEB_DIR: Final = Path(__file__).resolve().parent.parent / "web"
@@ -105,6 +106,11 @@ class Sample:
     path: Path
     title: str
     description: str
+    questions: tuple[str, ...] = ()
+    # Answers the model gave earlier to `questions` (samples/answers.json, made by
+    # eval/record_sample_answers.py): shown instantly and labelled as recorded, so
+    # the demo works when the cloud model's quota is used up.
+    answers: tuple[dict[str, Any], ...] = ()
 
     @property
     def size_mb(self) -> float:
@@ -122,11 +128,21 @@ def load_samples(demo: DemoConfig) -> dict[str, Sample]:
     index = root / "samples.yaml"
     if not index.is_file():
         return {}
+    recorded_file = root / ANSWERS_FILE
+    recorded: dict[str, list[dict[str, Any]]] = (
+        json.loads(recorded_file.read_text("utf-8")) if recorded_file.is_file() else {}
+    )
     out: dict[str, Sample] = {}
     for entry in yaml.safe_load(index.read_text("utf-8")) or []:
         path = root / str(entry["file"])
         if path.is_file() and path.suffix.lower() in LOG_SUFFIXES:
-            out[path.stem] = Sample(path, str(entry["title"]), str(entry.get("description", "")))
+            out[path.stem] = Sample(
+                path,
+                str(entry["title"]),
+                str(entry.get("description", "")),
+                tuple(str(q) for q in entry.get("questions") or []),
+                tuple(recorded.get(path.stem, [])),
+            )
     return out
 
 
@@ -223,6 +239,7 @@ def create_app(
             "expires_at": meta["expires_at"],
             "ml": bool(meta.get("ml")),
             "sample": bool(meta.get("sample")),
+            "sample_id": meta.get("sample_id"),
             "chat": chat_allowed(meta),
             "summary": _tool_json(s.ctx, "get_flight_summary"),
             "findings": _tool_json(s.ctx, "list_findings")["findings"],
@@ -316,16 +333,32 @@ def create_app(
     @app.get("/api/samples")
     def sample_list() -> list[dict[str, Any]]:
         return [
-            {"id": k, "title": v.title, "description": v.description, "size_mb": v.size_mb}
+            {
+                "id": k,
+                "title": v.title,
+                "description": v.description,
+                "size_mb": v.size_mb,
+                "questions": list(v.questions),
+                "recorded": [a["question"] for a in v.answers],
+            }
             for k, v in samples.items()
         ]
+
+    @app.get("/api/samples/{sample_id}/answers")
+    def sample_answers(sample_id: str) -> list[dict[str, Any]]:
+        sample = samples.get(sample_id)
+        if sample is None:
+            raise HTTPException(404, "no such sample")
+        return list(sample.answers)
 
     @app.post("/analyze/sample/{sample_id}")
     def analyze_sample(sample_id: str) -> dict[str, Any]:
         sample = samples.get(sample_id)
         if sample is None:
             raise HTTPException(404, "no such sample")
-        analysis_id, path = store.create(sample.path.name, ml=False, sample=True)
+        analysis_id, path = store.create(
+            sample.path.name, ml=False, sample=True, sample_id=sample_id
+        )
         shutil.copyfile(sample.path, path)
         store.update(analysis_id, size_bytes=path.stat().st_size)
         return ingest(analysis_id, path)

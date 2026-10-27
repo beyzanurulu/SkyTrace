@@ -1,0 +1,19 @@
+# SkyTrace config for the public demo on Render (overrides defaults.yaml).
+agent:
+  # Cloud model, key from the GEMINI_API_KEY secret. In demo mode only the
+  # sample flights are sent to it, never an uploaded log. The fallback model
+  # has its own free quota.
+  model: gemini/gemini-3.5-flash
+  fallback_model: gemini/gemini-3.5-flash-lite
+  api_base: null
+  timeout_s: 120
+api:
+  storage_dir: /tmp/skytrace-uploads
+  max_upload_mb: 20           # the free instance has 512 MB of memory
+  retention_hours: 1
+  max_loaded: 2
+demo:
+  enabled: true
+  samples_dir: samples
+  chat_on_uploads: false
+# No documentation index in the demo (it needs a local embedding model).

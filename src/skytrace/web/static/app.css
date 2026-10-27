@@ -367,6 +367,12 @@ h1, h2 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .chip .dom { font-family: var(--font-mono); color: var(--text-muted); font-size: 11px; }
 .chip .ttl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip.recorded { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.chip.recorded::before { content: "▶"; color: var(--accent); font-size: 9px; }
+.recorded-tag {
+  margin: 0 0 8px; font: 600 10.5px var(--font-mono); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--accent);
+}
 .chat-form { display: flex; gap: 8px; align-items: flex-end; }
 .chat-form textarea {
   flex: 1; resize: none; min-height: 44px; max-height: 160px;

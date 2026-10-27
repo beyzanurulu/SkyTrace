@@ -143,6 +143,8 @@ def test_demo_lists_and_opens_samples(tmp_path):
             "title": "Short VTOL flight",
             "description": "GPS EPH and pitch warnings",
             "size_mb": round(FIXTURE.stat().st_size / 1e6, 1),
+            "questions": [],
+            "recorded": [],
         }
     ]
     a = client.post("/analyze/sample/vtol").json()
@@ -271,3 +273,39 @@ def test_cleanup_removes_unfinished_folders(tmp_path):
     store = Store(tmp_path, retention_s=10, clock=lambda: 1e12)
     (tmp_path / "half-written").mkdir()
     assert store.cleanup() == ["half-written"]
+
+
+def test_sample_questions_and_recorded_answers(tmp_path):
+    client = demo_client(tmp_path)
+    samples = tmp_path / "samples"
+    (samples / "samples.yaml").write_text(
+        "- file: vtol.ulg\n  title: Short VTOL flight\n"
+        "  questions:\n    - What problems were detected?\n    - How long was it?\n",
+        "utf-8",
+    )
+    answer = {
+        "question": "What problems were detected?",
+        "model": "gemini/x",
+        "recorded_at": "2026-10-27",
+        "answer": "F001 and F002.",
+        "verified": True,
+    }
+    (samples / "answers.json").write_text(json.dumps({"vtol": [answer]}), "utf-8")
+    client = demo_client_reload(tmp_path)
+    (listed,) = client.get("/api/samples").json()
+    assert listed["questions"] == ["What problems were detected?", "How long was it?"]
+    assert listed["recorded"] == ["What problems were detected?"]
+    assert client.get("/api/samples/vtol/answers").json() == [answer]
+    assert client.get("/api/samples/nope/answers").status_code == 404
+    assert client.post("/analyze/sample/vtol").json()["sample_id"] == "vtol"
+
+
+def demo_client_reload(tmp_path):
+    """A demo app over an existing tmp samples folder (samples are read at start)."""
+    cfg = load_config()
+    cfg = replace(
+        cfg,
+        api=replace(cfg.api, storage_dir=str(tmp_path / "uploads")),
+        demo=replace(cfg.demo, enabled=True, samples_dir=str(tmp_path / "samples")),
+    )
+    return TestClient(create_app(cfg, docs=None, clock=Clock()))

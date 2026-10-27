@@ -191,6 +191,9 @@ agent:
   model: ollama_chat/qwen2.5:7b
   # Ollama server; null = the provider's default endpoint.
   api_base: http://localhost:11434
+  # Second model, used when `model` reports a rate limit or overload (cloud free
+  # tiers count quota per model). Same api_base. null = none.
+  fallback_model: null
   temperature: 0.0          # deterministic answers
   timeout_s: 300.0          # per model call (local models on a laptop GPU are slow)
   # Tool-call rounds before the model must answer with what it has.

@@ -1,0 +1,200 @@
+{
+ "px4_sitl_gps_loss": [
+  {
+   "question": "What went wrong in this flight?",
+   "model": "gemini/gemini-3.5-flash",
+   "recorded_at": "2026-10-27",
+   "answer": "The following issues occurred during the flight:\n\n1. **GPS Loss & Failsafe Landing (Critical)**\n   - **F001 (20.516–32.388 s)**: A GPS data loss occurred lasting 11.9 s (11.872 s).\n   - At 20.524 s, a GPS failure was injected (`[failure_injection_manager] Injected: gps off, all instances`).\n   - At 25.56 s, position control setpoints became invalid and triggered a blind land failsafe (`[mc_pos_control] Failsafe: blind land`).\n   - At 25.608 s, failsafe activated and the mode changed to `DESCEND`. Landing was detected at 30.384 s, and the vehicle disarmed at 32.388 s.\n\n2. **Accelerometer Clipping (Warning)**\n   - **F002 (29.776–29.776 s)**: 1 clipped sample was recorded on the accelerometer during the descent/landing phase.\n\n3. **Skipped Checks**\n   - Vibration level check was skipped due to uncalibrated thresholds for `px4_imu_status`.",
+   "verified": true,
+   "unverified": [],
+   "unknown_ids": [],
+   "unknown_urls": [],
+   "tool_calls": [
+    "get_events",
+    "search_docs"
+   ],
+   "prefetched": [
+    "get_flight_summary",
+    "list_findings"
+   ],
+   "finding_ids": [
+    "F001",
+    "F002"
+   ],
+   "plots": [],
+   "sources": []
+  },
+  {
+   "question": "When was the GPS lost, and for how long?",
+   "model": "gemini/gemini-3.5-flash",
+   "recorded_at": "2026-10-27",
+   "answer": "GPS data was lost at 20.516 s for a duration of 11.872 s, as reported in finding F001 (20.516-32.388 s).",
+   "verified": true,
+   "unverified": [],
+   "unknown_ids": [],
+   "unknown_urls": [],
+   "tool_calls": [
+    "list_findings"
+   ],
+   "prefetched": [
+    "get_flight_summary",
+    "list_findings"
+   ],
+   "finding_ids": [
+    "F001"
+   ],
+   "plots": [],
+   "sources": []
+  }
+ ],
+ "px4_sitl_motor_failure": [
+  {
+   "question": "Which motor had a problem, and when?",
+   "model": "gemini/gemini-3.5-flash",
+   "recorded_at": "2026-10-27",
+   "answer": "The log detected issues with **Motor 1**, **Motor 2**, and **Motor 4**:\n\n* **Motor 1**:\n  * **F001 (20.0-21.2 s)**: Saturated (output $\\ge$ 95%) for 1.2 s.\n  * **F003 (23.0-45.7 s)**: Ran above the motor average by up to 0.63 for 22.7 s.\n  * **F004 (24.4-42.1 s)**: Saturated (output $\\ge$ 95%) for 17.7 s.\n* **Motor 2**:\n  * **F005 (27.1-45.0 s)**: Ran below the motor average by up to 0.42 for 17.9 s.\n* **Motor 4**:\n  * **F008 (33.7-43.6 s)**: Ran below the motor average by up to 0.25 for 9.9 s.",
+   "verified": true,
+   "unverified": [],
+   "unknown_ids": [],
+   "unknown_urls": [],
+   "tool_calls": [
+    "query_series"
+   ],
+   "prefetched": [
+    "get_flight_summary",
+    "list_findings"
+   ],
+   "finding_ids": [
+    "F001",
+    "F003",
+    "F004",
+    "F005",
+    "F008"
+   ],
+   "plots": [],
+   "sources": []
+  },
+  {
+   "question": "What went wrong in this flight?",
+   "model": "gemini/gemini-3.5-flash-lite",
+   "recorded_at": "2026-10-27",
+   "answer": "Bu uçuş sırasında dronun performansını etkileyen ve kritik seviyede olan birtakım motor ve kontrol sorunları yaşanmıştır:\n\n1. **Motor Doygunluğu (Saturation) ve Dengesizlikleri:**\n   - **F001 (20.0–21.2 s):** Motor 1 doygunluğa ulaştı (çıktı >= %95) ve 1.2 saniye boyunca bu durumda kaldı (uyarı seviyesi).\n   - **F003 (23.0–45.7 s):** Motor 1, motor ortalamasının üzerinde 0.63 oranına kadar çıkarak 22.7 saniye boyunca büyük bir dengesizlik sergiledi (kritik).\n   - **F004 (24.4–42.1 s):** Motor 1, toplam 17.7 saniye boyunca doygunlukta kaldı (kritik).\n   - **F005 (27.1–45.0 s):** Motor 2, motor ortalamasının 0.42 altında çalışarak 17.9 saniye boyunca dengesizlik gösterdi (kritik).\n   - **F008 (33.7–43.6 s):** Motor 4, motor ortalamasının 0.25 altında çalışarak 9.9 saniye boyunca dengesizlik gösterdi (uyarı).\n\n2. **Tutum (Attitude) Takip Hataları:**\n   - **F006 (31.6–43.2 s):** Dron hedeflenen pitch (ayınlama/eğim) açısını takip edemedi; hata 39.2°'ye kadar ulaştı ve bu durum 11.6 saniye sürdü (kritik).\n   - **F007 (31.9–43.2 s):** Dron hedeflenen roll (yatış) açısını takip edemedi; hata 27.4°'ye kadar ulaştı ve bu durum 11.3 saniye sürdü (kritik).\n\n3. **Titreşim ve Kırpılma (Clipping):**\n   - **F002 (21.8 s):** İvmeölçerde 1 adet kırpılmış örnek tespit edildi (uyarı).\n   - **F009 (50.8 s):** İvmeölçerde 1 adet daha kırpılmış örnek tespit edildi (uyarı).",
+   "verified": true,
+   "unverified": [],
+   "unknown_ids": [],
+   "unknown_urls": [],
+   "tool_calls": [
+    "list_findings"
+   ],
+   "prefetched": [
+    "get_flight_summary",
+    "list_findings"
+   ],
+   "finding_ids": [
+    "F001",
+    "F002",
+    "F003",
+    "F004",
+    "F005",
+    "F006",
+    "F007",
+    "F008",
+    "F009"
+   ],
+   "plots": [],
+   "sources": []
+  }
+ ],
+ "px4_sitl_low_battery": [
+  {
+   "question": "How low did the battery get, and when?",
+   "model": "gemini/gemini-3.5-flash-lite",
+   "recorded_at": "2026-10-27",
+   "answer": "F001 (61.2-78.2 s) kapsamında, pil kapasitesi %5'e (5% - 0.0500197) kadar düşmüştür. Minimum kalan kapasite değerine 72.804 saniyede ulaşılmıştır. Ayrıca voltaj değeri en düşük 14.52 V seviyesine 66.204 saniyede inmiştir.",
+   "verified": true,
+   "unverified": [],
+   "unknown_ids": [],
+   "unknown_urls": [],
+   "tool_calls": [
+    "query_series"
+   ],
+   "prefetched": [
+    "get_flight_summary",
+    "list_findings"
+   ],
+   "finding_ids": [
+    "F001"
+   ],
+   "plots": [],
+   "sources": []
+  },
+  {
+   "question": "What went wrong in this flight?",
+   "model": "gemini/gemini-3.5-flash-lite",
+   "recorded_at": "2026-10-27",
+   "answer": "Uçuş sırasında tespit edilen bulgular:\n\n- **F001 (61.2–78.2 s):** Kritik düzeyde düşük batarya kapasitesi tespit edildi; kalan kapasite %5 (eşik %7).\n- **F002 (75.8 s):** İvmeölçer kırpılması (accelerometer clipping) tespit edildi; 1 kırpılmış örnek (75.8 s - 75.8 s aralığında).",
+   "verified": true,
+   "unverified": [],
+   "unknown_ids": [],
+   "unknown_urls": [],
+   "tool_calls": [
+    "list_findings"
+   ],
+   "prefetched": [
+    "get_flight_summary",
+    "list_findings"
+   ],
+   "finding_ids": [
+    "F001",
+    "F002"
+   ],
+   "plots": [],
+   "sources": []
+  }
+ ],
+ "px4_vtol_short": [
+  {
+   "question": "What problems were detected?",
+   "model": "gemini/gemini-3.5-flash-lite",
+   "recorded_at": "2026-10-27",
+   "answer": "Detected problems:\n- F001 (0.16-1.75 s): High GPS horizontal error, EPH 3.26 m (limit 3.00 m) for 1.6 s.\n- F002 (3.32-4.82 s): Pitch not following setpoint, error up to 19.9° (threshold 10.0°) for 1.5 s.",
+   "verified": true,
+   "unverified": [],
+   "unknown_ids": [],
+   "unknown_urls": [],
+   "tool_calls": [
+    "list_findings"
+   ],
+   "prefetched": [
+    "get_flight_summary",
+    "list_findings"
+   ],
+   "finding_ids": [
+    "F001",
+    "F002"
+   ],
+   "plots": [],
+   "sources": []
+  },
+  {
+   "question": "How long was the flight, and in which flight modes?",
+   "model": "gemini/gemini-3.5-flash-lite",
+   "recorded_at": "2026-10-27",
+   "answer": "Flight duration was 6.51 seconds (duration_s: 6.51379), and the flight mode was MANUAL at -0.09 s (t: -0.088409).",
+   "verified": true,
+   "unverified": [],
+   "unknown_ids": [],
+   "unknown_urls": [],
+   "tool_calls": [
+    "get_flight_summary"
+   ],
+   "prefetched": [
+    "get_flight_summary",
+    "list_findings"
+   ],
+   "finding_ids": [],
+   "plots": [],
+   "sources": []
+  }
+ ]
+}
